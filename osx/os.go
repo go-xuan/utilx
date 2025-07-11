@@ -7,7 +7,7 @@ import (
 	"strings"
 
 	"github.com/go-xuan/typex"
-	
+
 	"github.com/go-xuan/utilx/anyx"
 	"github.com/go-xuan/utilx/errorx"
 )
@@ -46,20 +46,20 @@ func SetValueFromEnv(v any) error {
 	for i := 0; i < elem.NumField(); i++ {
 		field := elem.Field(i)
 		tag := elem.Type().Field(i).Tag.Get("env")
-		key := strings.ToUpper(tag)
-		value := typex.NewString(os.Getenv(key))
-		switch field.Kind() {
-		case reflect.String:
-			field.SetString(value.Value())
-		case reflect.Bool:
-			field.SetBool(value.Bool())
-		case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64,
-			reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
-			field.SetInt(value.Int64())
-		case reflect.Float32, reflect.Float64:
-			field.SetFloat(value.Float64())
-		default:
-			continue
+		if value := os.Getenv(strings.ToUpper(tag)); value != "" {
+			switch field.Kind() {
+			case reflect.String:
+				field.SetString(typex.NewString(value).Value())
+			case reflect.Bool:
+				field.SetBool(typex.NewString(value).Bool())
+			case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64,
+				reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+				field.SetInt(typex.NewString(value).Int64())
+			case reflect.Float32, reflect.Float64:
+				field.SetFloat(typex.NewString(value).Float64())
+			default:
+				continue // 忽略不支持的类型
+			}
 		}
 	}
 	return nil
@@ -90,8 +90,10 @@ func SetEnvFromValue(v any) error {
 		default:
 			continue // 忽略不支持的类型
 		}
-		if err := os.Setenv(key, value); err != nil {
-			return errorx.Wrap(err, "set environment variable error")
+		if value != "" { // 如果值不为空，则更新环境变量
+			if err := os.Setenv(key, value); err != nil {
+				return errorx.Wrap(err, "set environment variable error")
+			}
 		}
 	}
 	return nil

@@ -83,7 +83,7 @@ func FormatFloat(f float64) string {
 func Between(str, start, end string) (from, to int) {
 	from, to = -1, -1
 	if start == end {
-		if indices := Indices(str, start); len(indices) > 1 {
+		if indices := Indices(str, start, 2); len(indices) == 2 {
 			from, to = indices[0], indices[1]
 		} else if len(indices) == 1 {
 			from = indices[0]
@@ -123,15 +123,23 @@ func Between(str, start, end string) (from, to int) {
 	return
 }
 
-// Indices 获取所有下标, x：命中数量
-func Indices(str, key string) []int {
+// Indices 获取所有下标, size：命中数量
+func Indices(str, sub string, size ...int) []int {
+	var limit = 0
+	if len(size) > 0 {
+		limit = size[0]
+	}
 	var indices []int
-	l, m, n := len(str), len(key), 0
+	l, m, n := len(str), len(sub), 0
 	for i := 0; i <= l-m; i++ {
-		if str[i] == key[0] && str[i:i+m] == key {
-			indices = append(indices, i)
-			n++
-			i = i + m - 1
+		if n <= limit || limit <= 0 {
+			if str[i] == sub[0] && str[i:i+m] == sub {
+				indices = append(indices, i)
+				i = i + m - 1
+				n++
+			}
+		} else {
+			break
 		}
 	}
 	return indices
