@@ -7,7 +7,7 @@ import (
 )
 
 const (
-	valuesKey = "__quanx_values__"
+	valuesKey = "__x_values__"
 )
 
 func New() context.Context {

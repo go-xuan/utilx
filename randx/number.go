@@ -1,7 +1,7 @@
 package randx
 
 import (
-	"github.com/go-xuan/utilx/floatx"
+	"github.com/go-xuan/utilx/mathx"
 )
 
 // Int 随机整数
@@ -39,7 +39,7 @@ func Int64Range(min, max int64) int64 {
 func Float64Range(min, max float64, prec int) float64 {
 	if min != max {
 		float := NewRand().Float64()*(max-min+1) + min
-		return floatx.Ground(float, prec)
+		return mathx.Ground(float, prec)
 	}
 	return min
 }

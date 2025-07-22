@@ -5,7 +5,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/go-xuan/utilx/intx"
+	"github.com/go-xuan/utilx/anyx"
 	"github.com/go-xuan/utilx/stringx"
 	"github.com/go-xuan/utilx/timex"
 )
@@ -94,7 +94,7 @@ func (p *Param) Int() int {
 func (p *Param) Float() float64 {
 	min := stringx.ParseFloat(p.Min, 1)
 	max := stringx.ParseFloat(p.Max, 999)
-	prec := intx.IfZero(p.Prec, 6)
+	prec := anyx.IfZero(p.Prec, 6)
 	return Float64Range(min, max, prec)
 }
 

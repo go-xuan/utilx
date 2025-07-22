@@ -16,8 +16,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/go-xuan/utilx/anyx"
 	"github.com/go-xuan/utilx/errorx"
-	"github.com/go-xuan/utilx/intx"
 	"github.com/go-xuan/utilx/stringx"
 )
 
@@ -149,7 +149,7 @@ func WriteCSV(path string, data [][]string) error {
 
 func Open(filePath string, flag ...int) (*os.File, error) {
 	CreateIfNotExist(filePath)
-	file, err := os.OpenFile(filePath, intx.Default(Overwrite, flag...), 0644)
+	file, err := os.OpenFile(filePath, anyx.Default(Overwrite, flag...), 0644)
 	if err != nil {
 		return nil, errorx.Wrap(err, "open file error")
 	}

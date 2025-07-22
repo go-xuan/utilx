@@ -3,6 +3,7 @@ package taskx
 import (
 	"sync"
 
+	"github.com/go-xuan/utilx/errorx"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -64,13 +65,13 @@ func (q *QueueScheduler) Execute() error {
 	for current != nil {
 		logger := log.WithField("curr_task", current.name)
 		if current.next != nil {
-			logger.WithField("next_task", current.next.name)
+			logger = logger.WithField("next_task", current.next.name)
 		}
 		// 执行当前任务
 		logger.Info("queue task execute")
 		if err := current.fn(); err != nil {
-			logger.Error("queue task execute error")
-			return err
+			logger.WithField("error", err.Error()).Error("queue task execute error")
+			return errorx.Wrap(err, "queue task execute error")
 		}
 
 		// 从任务列表中删除当前任务并更新当前任务指针

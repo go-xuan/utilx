@@ -44,9 +44,8 @@ func TestRsa(t *testing.T) {
 		fmt.Println(err)
 		return
 	}
-	rsaCrypto, err := ParseRsaCrypto(data, PKCS8)
-	//rsaCrypto, err := NewRsaCrypto(2048, PKCS8, PKIX)
-	if err != nil {
+	var rsaCrypto *RsaCrypto
+	if rsaCrypto, err = ParseRsaCrypto(data, PKCS8); err != nil {
 		fmt.Println(err)
 		return
 	}

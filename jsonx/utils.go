@@ -1,11 +1,19 @@
 package jsonx
 
 import (
+	"encoding/json"
 	"strconv"
 	"strings"
 
 	"github.com/tidwall/gjson"
 )
+
+func Marshal(v any) []byte {
+	if b, err := json.Marshal(v); err == nil {
+		return b
+	}
+	return nil
+}
 
 // Get 通过path路径获取json对应部分
 func Get(json string, path string) gjson.Result {

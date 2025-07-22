@@ -1,11 +1,11 @@
 package encodingx
 
-// EncodeToString 加密接口
-type EncodeToString interface {
+// Encoder 加密器
+type Encoder interface {
 	Encode(plaintext []byte) string
 }
 
-// DecodeString 解密接口
-type DecodeString interface {
+// Decoder 解密器
+type Decoder interface {
 	Decode(ciphertext string) ([]byte, error)
 }

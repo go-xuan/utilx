@@ -24,9 +24,7 @@ func job4(context.Context) {
 
 func TestCron(t *testing.T) {
 	// 初始化
-	scheduler := Cron(
-		DurationWrap,
-	)
+	scheduler := Cron()
 
 	scheduler.Add("job1", "@every 5s", job1)
 	scheduler.Add("job2", "@every 2s", job2)
