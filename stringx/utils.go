@@ -90,30 +90,28 @@ func Between(str, start, end string) (from, to int) {
 		}
 		return
 	}
-	var l, sl, el = len(str), len(start), len(end)
-	if sl > l || el > l {
+	a, b, c := []rune(str), []rune(start), []rune(end)
+	l, m, n := len(a), len(b), len(c)
+	if m > l || n > l {
 		return
 	}
-	// x:start个数  y:end个数
 	var x, y int
 	for i := 0; i < l; i++ {
-		if str[i] == start[0] {
-			if str[i:i+sl] == start {
-				x++
-				if x == 1 {
+		if a[i] == b[0] {
+			if string(a[i:i+m]) == start {
+				if x++; x == 1 {
 					from = i
 				}
-				i = i + sl - 1
+				i = i + m - 1
 			}
 		}
-		if str[i] == end[0] {
-			if str[i:i+el] == end {
-				y++
-				if y == x || x == 1 {
+		if a[i] == c[0] {
+			if string(a[i:i+n]) == end {
+				if y++; y == x || x == 1 {
 					to = i
 					break
 				}
-				i = i + el - 1
+				i = i + n - 1
 			}
 		}
 	}
@@ -129,11 +127,12 @@ func Indices(str, sub string, size ...int) []int {
 	if len(size) > 0 {
 		limit = size[0]
 	}
+	a, b := []rune(str), []rune(sub)
+	l, m, n := len(a), len(b), 0
 	var indices []int
-	l, m, n := len(str), len(sub), 0
 	for i := 0; i <= l-m; i++ {
 		if n <= limit || limit <= 0 {
-			if str[i] == sub[0] && str[i:i+m] == sub {
+			if a[i] == b[0] && string(a[i:i+m]) == sub {
 				indices = append(indices, i)
 				i = i + m - 1
 				n++
@@ -147,26 +146,24 @@ func Indices(str, sub string, size ...int) []int {
 
 // Index 获取子串的下标
 // position：表示获取位置，默认position=1即正序第1处，position=-1即倒序第1处
-func Index(str, key string, position ...int) int {
-	if l, m := len(str), len(key); l >= m {
-		var x, y = 1, 0 // x：目标获取位置，y：sep出现次数计数
+func Index(str, sub string, position ...int) int {
+	a, b := []rune(str), []rune(sub)
+	if l, m := len(a), len(b); l >= m {
+		var x, y = 1, 0
 		if len(position) > 0 {
 			x = position[0]
 		}
 		for i := 0; i <= l-m; i++ {
 			if x > 0 {
-				if str[i] == key[0] && str[i:i+m] == key {
-					y++
-					if x == y {
+				if a[i] == b[0] && string(a[i:i+m]) == sub {
+					if y++; x == y {
 						return i
 					}
 				}
 			} else {
-				j := l - i
-				if str[j-1] == key[m-1] && str[j-m:j] == key {
-					y--
-					if x == y {
-						return j - m
+				if a[l-i-1] == b[m-1] && string(a[l-i-m:l-i]) == sub {
+					if y--; x == y {
+						return l - i - m
 					}
 				}
 			}
@@ -177,13 +174,13 @@ func Index(str, key string, position ...int) int {
 
 // IndexStrict 获取子串下标（严格模式：忽略单词中的子串）
 func IndexStrict(str, key string) int {
-	kl, loop, index := len(key), true, 0
+	l, loop, index := len(key), true, 0
 	for loop {
 		if newIndex := Index(str, key, 1); newIndex >= 0 {
 			if HasAdjacent(str, key, " ", newIndex) {
 				index, loop = index+newIndex, false
 			} else {
-				index = newIndex + kl
+				index = newIndex + l
 				str = str[index:]
 			}
 		} else {
@@ -326,9 +323,9 @@ func SubString(str string, start, end int) string {
 
 // Cut 分割字符串（reverse=true从右往左）
 // position：表示分割位置，默认position=1即正序第1处，position=-1即倒序第1处
-func Cut(str, sep string, position ...int) (string, string) {
-	if i := Index(str, sep, position...); i >= 0 {
-		return str[:i], str[i+len(sep):]
+func Cut(str, cut string, position ...int) (string, string) {
+	if i := Index(str, cut, position...); i >= 0 {
+		return str[:i], str[i+len(cut):]
 	}
 	return str, ""
 }
@@ -383,56 +380,49 @@ func ParseUrlParams(str string) map[string]string {
 
 // ToSnake 转下划线
 func ToSnake(str string) string {
-	data := make([]byte, 0, len(str)*2)
-	j := false
-	num := len(str)
-	for i := 0; i < num; i++ {
-		d := str[i]
-		if i > 0 && d >= 'A' && d <= 'Z' && j {
-			data = append(data, '_')
-		}
-		if d != '_' {
+	runes, j := []rune(str), false
+	var res []rune
+	for i, r := range runes {
+		if i > 0 && r >= 65 && r <= 90 && j {
+			res = append(res, 95)
+		} else if r != 95 {
 			j = true
 		}
-		data = append(data, d)
+		res = append(res, r)
 	}
-	return strings.ToLower(string(data[:]))
+	return strings.ToLower(string(res[:]))
 }
 
 // ToLowerCamel 转小驼峰
 func ToLowerCamel(str string) string {
-	ucc := ToUpperCamel(str)
-	return strings.ToLower(string(ucc[0])) + ucc[1:]
+	runes := toUpperCamel([]rune(str))
+	runes[0] = runes[0] + 32
+	return string(runes)
 }
 
 // ToUpperCamel 转大驼峰
 func ToUpperCamel(str string) string {
-	str = strings.ToLower(str)
-	data := make([]byte, 0, len(str))
-	j := false
-	k := false
-	num := len(str) - 1
-	for i := 0; i <= num; i++ {
-		d := str[i]
-		if k == false && d >= 'A' && d <= 'Z' {
-			k = true
-		}
-		if d >= 'a' && d <= 'z' && (j || k == false) {
-			d = d - 32
-			j = false
-			k = true
-		}
-		if k && d == '_' && num > i && str[i+1] >= 'a' && str[i+1] <= 'z' {
-			j = true
+	runes := toUpperCamel([]rune(str))
+	return string(runes)
+}
+
+func toUpperCamel(runes []rune) []rune {
+	up := true
+	var res []rune
+	for _, r := range runes {
+		if r == 95 {
+			up = true
 			continue
+		} else if r >= 65 && r <= 90 && up {
+			up = false
+		} else if r >= 65 && r <= 90 {
+			r = r + 32
+		} else if r >= 97 && r <= 122 && up {
+			r, up = r-32, false
 		}
-		if k && d == '_' && num > i && str[i+1] >= '0' && str[i+1] <= '9' {
-			j = true
-			continue
-		}
-		data = append(data, d)
+		res = append(res, r)
 	}
-	return string(data[:])
+	return res
 }
 
 // Similarity 文本相似度计算
