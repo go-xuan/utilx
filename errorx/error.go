@@ -80,6 +80,7 @@ func Errorf(format string, a ...interface{}) error {
 	return &Error{msg: fmt.Sprintf(format, a...), stack: getStack()}
 }
 
+// 调用栈
 type stack []uintptr
 
 // Format 打印调用栈信息（fmt实现）

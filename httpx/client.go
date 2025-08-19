@@ -1,154 +1,71 @@
 package httpx
 
 import (
-	"crypto/tls"
-	"crypto/x509"
 	"io"
-	"net"
 	"net/http"
-	"net/url"
-	"os"
 	"sync"
-	"time"
 
 	"github.com/go-xuan/utilx/errorx"
 )
 
-var (
-	_client *Client    // http客户端
-	mu      sync.Mutex // 互斥锁
-)
+var _client *Client // http客户端
 
 // GetClient 获取httpx客户端
-func GetClient(options ...Option) *Client {
-	if len(options) > 0 {
-		setting := &ClientSetting{}
-		for _, option := range options {
-			option(setting)
+func GetClient() *Client {
+	if _client == nil {
+		_client = &Client{
+			mu:      sync.Mutex{},
+			clients: make(map[string]*http.Client),
 		}
-		return setting.Client()
+		settings := DefaultSettings()
+		client := settings.NewClient()
+		_client.client = client
+		_client.clients[settings.UniqueId()] = client
 	}
-	return newHttpClient()
-}
-
-// 初始化httpx客户端
-func newClient(strategy int, crt, proxy string) *Client {
-	return &Client{
-		strategy: strategy,
-		client: &http.Client{
-			Timeout:   time.Second * 10,
-			Transport: newTransport(crt, proxy),
-		},
-	}
+	return _client
 }
 
 // Client httpx客户端
 type Client struct {
-	strategy int          // 客户端类型
-	crt      string       // 证书存储路径
-	proxy    string       // 代理服务器地址
-	client   *http.Client // http客户端
+	mu      sync.Mutex              // 互斥锁
+	client  *http.Client            // 默认客户端
+	clients map[string]*http.Client // 客户端缓存
 }
 
 // HttpClient 获取http客户端
-func (c *Client) HttpClient() *http.Client {
+func (c *Client) HttpClient(options ...SettingsOption) *http.Client {
+	var client = new(http.Client)
+	if len(options) > 0 && options[0] != nil {
+		c.mu.Lock()
+		defer c.mu.Unlock()
+		settings := DefaultSettings()
+		for _, option := range options {
+			option(settings)
+		}
+		var ok bool
+		if client, ok = c.clients[settings.UniqueId()]; !ok {
+			client = settings.NewClient()
+			// 缓存客户端, 后续相同配置的请求直接从缓存中获取
+			c.clients[settings.UniqueId()] = client
+		}
+	}
 	return c.client
 }
 
-func (c *Client) Do(request *http.Request) (*Response, error) {
-	if c.client == nil {
-		return nil, errorx.New("client is nil")
-	}
-	response, err := c.client.Do(request)
+// Do 执行http请求
+func (c *Client) Do(request *http.Request, option ...SettingsOption) (*Response, error) {
+	resp, err := c.HttpClient(option...).Do(request)
 	if err != nil {
-		return nil, errorx.Wrap(err, "do http request error")
+		return nil, errorx.Wrap(err, "http request error")
 	}
-	resp := &Response{
-		status:  response.StatusCode,
-		cookies: response.Cookies(),
-	}
-	if resp.body, err = io.ReadAll(response.Body); err != nil {
-		return resp, errorx.Wrap(err, "read http response body error")
-	}
-	_ = response.Body.Close()
-	return resp, nil
-}
+	defer resp.Body.Close()
 
-const (
-	httpStrategyCode = iota + 1
-	proxyStrategyCode
-	httpsStrategyCode
-	httpsProxyStrategyCode
-)
-
-func newHttpClient() *Client {
-	mu.Lock()
-	defer mu.Unlock()
-	if _client == nil || _client.strategy != httpStrategyCode {
-		_client = newClient(httpStrategyCode, "", "")
+	response := &Response{
+		status:  resp.StatusCode,
+		cookies: resp.Cookies(),
 	}
-	return _client
-}
-
-func newHttpsClient(crt string) *Client {
-	mu.Lock()
-	defer mu.Unlock()
-	if _client == nil || _client.strategy != httpsStrategyCode {
-		_client = newClient(httpsStrategyCode, crt, "")
+	if response.body, err = io.ReadAll(resp.Body); err != nil {
+		return response, errorx.Wrap(err, "http response body read error")
 	}
-	return _client
-}
-
-func newHttpProxyClient(proxy string) *Client {
-	mu.Lock()
-	defer mu.Unlock()
-	if _client == nil || _client.strategy != proxyStrategyCode {
-		_client = newClient(proxyStrategyCode, "", proxy)
-	}
-	return _client
-}
-
-func newHttpsProxyClient(crt, proxy string) *Client {
-	mu.Lock()
-	defer mu.Unlock()
-	if _client == nil || _client.strategy != httpsProxyStrategyCode {
-		_client = newClient(httpsProxyStrategyCode, crt, proxy)
-	}
-	return _client
-}
-
-func newTransport(crt, proxy string) *http.Transport {
-	dialer := &net.Dialer{
-		Timeout:   time.Second * 10,
-		KeepAlive: time.Second * 10,
-	}
-	transport := &http.Transport{
-		DialContext:           dialer.DialContext,
-		Proxy:                 http.ProxyFromEnvironment,
-		MaxIdleConns:          30,
-		IdleConnTimeout:       time.Second * 90,
-		TLSHandshakeTimeout:   time.Second * 10,
-		ExpectContinueTimeout: time.Second,
-	}
-	if crt != "" {
-		if pem, err := os.ReadFile(crt); err == nil {
-			pool := x509.NewCertPool()
-			if !pool.AppendCertsFromPEM(pem) {
-				transport.TLSClientConfig = &tls.Config{
-					ClientCAs:          pool,
-					InsecureSkipVerify: true,
-				}
-			}
-		} else {
-			panic(err)
-		}
-	}
-	if proxy != "" {
-		if u, err := url.Parse(proxy); err == nil {
-			transport.Proxy = http.ProxyURL(u)
-		} else {
-			panic(err)
-		}
-	}
-	return transport
+	return response, nil
 }

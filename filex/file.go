@@ -26,12 +26,6 @@ const (
 	Append    = os.O_RDWR | os.O_CREATE | os.O_APPEND
 )
 
-const (
-	DirAndFile = "all"
-	OnlyDir    = "dir"
-	OnlyFile   = "file"
-)
-
 // ReadFile 读取文件内容
 func ReadFile(path string) ([]byte, error) {
 	if content, err := os.ReadFile(path); err != nil {
@@ -281,7 +275,7 @@ func CreateIfNotExist(path string) {
 func CreateDir(path string) {
 	if !Exists(path) {
 		dir, file := filepath.Split(path)
-		if stringx.Index(file, ".") == -1 {
+		if stringx.Index(file, ".") < 0 {
 			dir = filepath.Join(dir, file)
 		}
 		// 先创建文件夹
@@ -365,28 +359,21 @@ type File struct {
 }
 
 // FileScan 获取目录下所有文件路径
-func FileScan(dir string, suffix string) ([]*File, error) {
+func FileScan(dir string, keyword string) ([]*File, error) {
 	var files []*File
 	if err := filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
-		file := File{path, info}
-		switch suffix {
-		case DirAndFile:
-			files = append(files, &file)
-		case OnlyDir:
-			if info.IsDir() {
-				files = append(files, &file)
-			}
-		case OnlyFile:
-			if !info.IsDir() {
-				files = append(files, &file)
-			}
-		default:
-			if info.Name() == suffix {
-				files = append(files, &file)
-			}
+		switch {
+		case keyword == "" || keyword == "*":
+			files = append(files, &File{Path: path, Info: info})
+		case keyword == "dir" && info.IsDir():
+			files = append(files, &File{Path: path, Info: info})
+		case keyword == "file" && !info.IsDir():
+			files = append(files, &File{Path: path, Info: info})
+		case stringx.Index(info.Name(), keyword) >= 0:
+			files = append(files, &File{Path: path, Info: info})
 		}
 		return nil
 	}); err != nil {

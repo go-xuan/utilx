@@ -227,21 +227,6 @@ func Split(str string, sep string) []string {
 	return slice
 }
 
-// Contains 字符串是否包含
-func Contains(str string, keys ...string) (string, int) {
-	var hit, index = "", -1
-	for _, key := range keys {
-		if i := Index(str, key); i >= 0 {
-			if i < index {
-				hit, index = key, i
-			} else if index == -1 {
-				hit, index = key, i
-			}
-		}
-	}
-	return hit, index
-}
-
 // ContainsAny 字符串是否包含
 func ContainsAny(str string, keys ...string) bool {
 	for _, key := range keys {
@@ -255,7 +240,7 @@ func ContainsAny(str string, keys ...string) bool {
 // ContainsBoth 字符串是否包含
 func ContainsBoth(str string, seps ...string) bool {
 	for _, sep := range seps {
-		if Index(str, sep) == -1 {
+		if Index(str, sep) < 0 {
 			return false
 		}
 	}

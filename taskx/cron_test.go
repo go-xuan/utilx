@@ -1,41 +1,35 @@
 package taskx
 
 import (
-	"context"
 	"fmt"
 	"testing"
+	"time"
 )
-
-func job1(context.Context) {
-	fmt.Println("执行定时任务 ==> job1")
-}
-
-func job2(context.Context) {
-	fmt.Println("执行定时任务 ==> job2")
-}
-
-func job3(context.Context) {
-	fmt.Println("执行定时任务 ==> job3")
-}
-
-func job4(context.Context) {
-	fmt.Println("执行定时任务 ==> job4")
-}
 
 func TestCron(t *testing.T) {
 	// 初始化
-	scheduler := Cron()
+	scheduler := NewCronScheduler()
 
-	scheduler.Add("job1", "@every 5s", job1)
-	scheduler.Add("job2", "@every 2s", job2)
-	scheduler.Add("job3", "@daily", job3)
-	scheduler.Add("job4", "0 */1 * * * ?", job4)
+	_ = scheduler.Add(NewCronTask("task1", "@every 5s", &testTask{id: 1, ratio: 0.6}))
+	_ = scheduler.Add(NewCronTask("task2", "@every 2s", &testTask{id: 2, ratio: 0.5}))
+	_ = scheduler.Add(NewCronTask("task3", "@daily", &testTask{id: 3, ratio: 0.6}))
+	_ = scheduler.Add(NewCronTask("task4", "@0 */1 * * * ?s", &testTask{id: 4, ratio: 0.6}))
 
-	scheduler.Start()
+	// 开始调度
+	if err := scheduler.Execute(t.Context()); err != nil {
+		t.Fatal(err)
+		return
+	}
 
 	// 定时任务信息
-	for i, job := range scheduler.All() {
-		fmt.Println(i, job.Info())
+	for _, task := range scheduler.All() {
+		fmt.Println(task.GetMeta())
+	}
+
+	time.Sleep(20 * time.Second)
+
+	for _, task := range scheduler.All() {
+		fmt.Println(task.GetMeta())
 	}
 	select {}
 }
