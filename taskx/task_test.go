@@ -2,6 +2,7 @@ package taskx
 
 import (
 	"context"
+	"fmt"
 	"math/rand"
 	"testing"
 	"time"
@@ -14,7 +15,11 @@ type testTask struct {
 	ratio float64 // 成功率
 }
 
-func (t *testTask) Execute(ctx context.Context) error {
+func (t testTask) GetUnique() string {
+	return fmt.Sprintf("task_%d", t.id)
+}
+
+func (t testTask) Execute(ctx context.Context) error {
 	value := rand.New(rand.NewSource(time.Now().UnixNano())).Intn(100)
 	threshold := int(t.ratio * 100)
 	if value <= threshold {
@@ -24,9 +29,7 @@ func (t *testTask) Execute(ctx context.Context) error {
 }
 
 func TestTask(t *testing.T) {
-	task := &testTask{5, 0.5}
-	if err := task.Execute(context.Background()); err != nil {
+	if err := (testTask{5, 0.5}).Execute(t.Context()); err != nil {
 		t.Log(err)
 	}
-	return
 }

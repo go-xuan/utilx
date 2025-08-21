@@ -1,27 +1,25 @@
 package anyx
 
 // If if取值
-func If[T any](x bool, t, f T) T {
-	if x {
-		return t
-	} else {
-		return f
+func If[T any](condition bool, trueValue, falseValue T) T {
+	if condition {
+		return trueValue
 	}
+	return falseValue
 }
 
-// IfZero 判空时取默认值
-func IfZero[T any](x, def T) T {
-	if ValueOf(&x).IsZero() {
+// IfZero 为空时取默认值
+func IfZero[T any](zero, def T) T {
+	if ValueOf(&zero).IsZero() {
 		return def
 	}
-	return x
+	return zero
 }
 
-// Default 用于函数中的不定参数取默认值
-func Default[T any](def T, x ...T) T {
-	if len(x) == 0 {
+// Default 用于函数中的不定参数取默认值,可变
+func Default[T any](def T, variable ...T) T {
+	if len(variable) == 0 {
 		return def
-	} else {
-		return x[0]
 	}
+	return variable[0]
 }

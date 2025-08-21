@@ -2,10 +2,11 @@ package excelx
 
 import (
 	"github.com/tealeg/xlsx"
-	
+
 	"github.com/go-xuan/utilx/errorx"
 )
 
+// SheetWriter sheet-Writer
 type SheetWriter interface {
 	WriteHeader(sheet *xlsx.Sheet)
 	WriteRow(sheet *xlsx.Sheet)

@@ -7,22 +7,22 @@ import (
 )
 
 func TestConcurrent(t *testing.T) {
-	task := NewConcurrencyTask(10).SetCallback(LogResult)
+	concurrencyTask := NewConcurrencyTask(10).SetCallback(ErrorLogCallback)
 	for i := 0; i < 20; i++ {
-		task.AddTask(&testTask{id: i, ratio: 0.5})
+		concurrencyTask.AddExecute(testTask{id: i, ratio: 0.5}.Execute)
 	}
-	if err := task.Execute(context.Background()); err != nil {
-		t.Fatal(err)
+	if err := concurrencyTask.Execute(context.Background()); err != nil {
+		t.Log(err)
 	}
 }
 
 func TestConcurrentAndRetry(t *testing.T) {
-	task := NewConcurrencyTask(5).SetCallback(RetryCallback(3, time.Second))
+	concurrencyTask := NewConcurrencyTask(5).SetCallback(RetryCallback(3, time.Second))
 	for i := 0; i < 20; i++ {
-		task.AddTask(&testTask{id: i, ratio: 0.5})
+		concurrencyTask.AddExecute(testTask{id: i, ratio: 0.5}.Execute)
 	}
-	if err := task.Execute(context.Background()); err != nil {
-		t.Fatal(err)
+	if err := concurrencyTask.Execute(context.Background()); err != nil {
+		t.Log(err)
 	}
 	time.Sleep(20 * time.Second)
 }

@@ -21,6 +21,7 @@ const (
 	PublicKeyType  = "PUBLIC KEY"
 )
 
+// RSA 生成RAS加密对象
 func RSA() (Crypto, error) {
 	crypto, err := NewRsaCrypto(1024)
 	if err != nil {

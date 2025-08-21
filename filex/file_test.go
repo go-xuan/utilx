@@ -16,17 +16,15 @@ func TestFileSplit(t *testing.T) {
 }
 
 func TestFileWrite(t *testing.T) {
-	WriteFileString("nohup.log", "1111\n", Append)
-	WriteFileString("nohup.log", "2222\n", Append)
-	WriteFileString("nohup.log", "3333\n", Append)
-
-	WriteFileLine("nohup.log", []string{
+	_ = WriteFileString("nohup.log", "1111\n", Append)
+	_ = WriteFileString("nohup.log", "2222\n", Append)
+	_ = WriteFileString("nohup.log", "3333\n", Append)
+	_ = WriteFileLine("nohup.log", []string{
 		"4444",
 		"5555",
 		"6666",
 	}, Append)
-
-	WriteFileLine("nohup.log", []string{
+	_ = WriteFileLine("nohup.log", []string{
 		"7777",
 		"8888",
 		"9999",

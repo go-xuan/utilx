@@ -9,7 +9,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-// NewRetry 创建重试
+// NewRetry 新建重试策略
 func NewRetry(times int, interval time.Duration) *Retry {
 	return &Retry{
 		times:    times,
@@ -24,22 +24,22 @@ type Retry struct {
 }
 
 // Execute 重试执行
-func (r *Retry) Execute(ctx context.Context, task Task) error {
-	if err := task.Execute(ctx); err != nil {
+func (r *Retry) Execute(ctx context.Context, execute Execute) error {
+	if err := execute(ctx); err != nil {
 		if r.times > 0 {
 			curr := 1
 			for curr <= r.times {
-				log.WithField("retry_times", curr).Error("task retry failed, retrying...")
-				if err = task.Execute(ctx); err == nil {
-					log.WithField("retry_times", curr).Info("task retry success finally")
+				log.WithField("retry_times", curr).Error("retry failed, retrying...")
+				if err = execute(ctx); err == nil {
+					log.WithField("retry_times", curr).Info("retry success finally")
 					return nil
 				}
 				time.Sleep(r.interval)
 				curr++
 			}
-			return errorx.Wrap(err, fmt.Sprintf("task retry failed after %d retries", r.times))
+			return errorx.Wrap(err, fmt.Sprintf("retry failed after %d retries", r.times))
 		}
-		return errorx.Wrap(err, fmt.Sprintf("task retry failed, no retry"))
+		return errorx.Wrap(err, fmt.Sprintf("retry failed, no retry"))
 	}
 	return nil
 }
@@ -56,22 +56,22 @@ func NewRetryTask(times int, interval time.Duration) *RetryTask {
 
 // RetryTask 重试任务调度器
 type RetryTask struct {
-	Retry      // 重试策略
-	task  Task // 任务实例
+	Retry           // 重试策略
+	execute Execute // 任务实例
 }
 
 func (s *RetryTask) Execute(ctx context.Context) error {
-	if s.task == nil {
-		return errorx.New("retry task is nil")
+	if s.execute == nil {
+		return errorx.New("retry execute is nil")
 	}
-	if err := s.Retry.Execute(ctx, s.task); err != nil {
-		return errorx.Wrap(err, "retry task execute failed")
+	if err := s.Retry.Execute(ctx, s.execute); err != nil {
+		return errorx.Wrap(err, "retry execute failed")
 	}
 	return nil
 }
 
-// AddTask 设置任务执行
-func (s *RetryTask) AddTask(task Task) *RetryTask {
-	s.task = task
+// AddExecute 设置任务执行函数
+func (s *RetryTask) AddExecute(execute Execute) *RetryTask {
+	s.execute = execute
 	return s
 }

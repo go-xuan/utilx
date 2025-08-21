@@ -8,6 +8,7 @@ import (
 	"github.com/tidwall/gjson"
 )
 
+// Marshal 序列化
 func Marshal(v any) []byte {
 	if b, err := json.Marshal(v); err == nil {
 		return b

@@ -17,7 +17,7 @@ const (
 	GCM
 )
 
-// AES 创建AES对象（默认CBC模式）
+// AES 创建AES加密对象（默认CBC模式）
 func AES() (Crypto, error) {
 	key := randx.String(16)
 	iv := randx.String(16)

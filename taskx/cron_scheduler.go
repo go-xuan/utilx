@@ -17,20 +17,21 @@ const (
 )
 
 // NewCronScheduler 定时任务调度器
-func NewCronScheduler(wrappers ...Wrapper) *CronScheduler {
-	var options = []cron.Option{
-		cron.WithParser(CronParser()),
-		cron.WithChain(cron.SkipIfStillRunning(cron.DefaultLogger)),
-		cron.WithLogger(cron.DefaultLogger),
+func NewCronScheduler(wraps ...Wrap) *CronScheduler {
+	scheduler := &CronScheduler{
+		mutex:  new(sync.Mutex),
+		status: initializationStatus,
+		cron: cron.New(
+			cron.WithParser(CronParser()),
+			cron.WithChain(cron.SkipIfStillRunning(cron.DefaultLogger)),
+			cron.WithLogger(cron.DefaultLogger),
+		),
+		names:   []string{},
+		tasks:   make(map[string]*CronTask),
+		wrapper: &Wrapper{wraps: make([]Wrap, 0)},
 	}
-	return &CronScheduler{
-		mutex:    new(sync.Mutex),
-		status:   initializationStatus,
-		cron:     cron.New(options...),
-		names:    []string{},
-		tasks:    make(map[string]*CronTask),
-		wrappers: wrappers,
-	}
+	scheduler.wrapper.Add(wraps...)
+	return scheduler
 }
 
 // CronParser 默认的定时任务表达式解析器
@@ -51,16 +52,22 @@ func ParseDurationBySpec(spec string) time.Duration {
 
 // CronScheduler 定时任务调度器
 type CronScheduler struct {
-	mutex    *sync.Mutex          // 互斥锁
-	status   uint                 // 调度器状态（0-初始化；1-待运行；2-运行中；3-停止）
-	cron     *cron.Cron           // corn对象
-	names    []string             // 任务名称
-	tasks    map[string]*CronTask // 定时任务
-	wrappers []Wrapper            // 定时任务包装器
+	mutex   *sync.Mutex          // 互斥锁
+	cron    *cron.Cron           // corn对象
+	status  uint                 // 调度器状态（0-初始化；1-待运行；2-运行中；3-停止）
+	names   []string             // 任务名称
+	tasks   map[string]*CronTask // 定时任务
+	wrapper *Wrapper             // 定时任务包装器
 }
 
-// Add 添加定时任务
-func (s *CronScheduler) Add(task *CronTask) *CronScheduler {
+// AddWrap 添加包装器
+func (s *CronScheduler) AddWrap(wraps ...Wrap) error {
+	s.wrapper.Add(wraps...)
+	return nil
+}
+
+// AddTask 添加定时任务
+func (s *CronScheduler) AddTask(task *CronTask) *CronScheduler {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 	name, spec := task.name, task.spec
@@ -73,9 +80,9 @@ func (s *CronScheduler) Add(task *CronTask) *CronScheduler {
 	}
 
 	// 遍历装饰器，对任务执行方法进行包装
-	if wrappers := s.wrappers; wrappers != nil {
-		for _, wrapper := range wrappers {
-			task.Wrap(wrapper)
+	if wraps := s.wrapper.wraps; wraps != nil {
+		for _, wrap := range wraps {
+			task.Wrap(wrap)
 		}
 	}
 
@@ -103,7 +110,7 @@ func (s *CronScheduler) Remove(name string) error {
 		s.cron.Remove(task.entry.ID)
 		delete(s.tasks, name)
 	} else {
-		return errorx.New("task not found: " + name)
+		return errorx.New("execute not found: " + name)
 	}
 	// 当任务清零则状态值归零
 	if len(s.tasks) == 0 {
@@ -119,7 +126,7 @@ func (s *CronScheduler) Remove(name string) error {
 func (s *CronScheduler) Execute(ctx context.Context) error {
 	switch s.status {
 	case initializationStatus:
-		return errorx.New("please add the Task first")
+		return errorx.New("please add the GetExecute first")
 	case runningStatus:
 		return errorx.New("the cron scheduler already running")
 	default:

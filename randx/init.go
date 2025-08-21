@@ -24,13 +24,13 @@ const (
 	phonePrefix       = "358"
 )
 
-var newRand *rand.Rand
+var _rand *rand.Rand
 
 func NewRand() *rand.Rand {
-	if newRand == nil {
-		newRand = rand.New(rand.NewSource(seed()))
+	if _rand == nil {
+		_rand = rand.New(rand.NewSource(seed()))
 	}
-	return newRand
+	return _rand
 }
 
 // 随机种子

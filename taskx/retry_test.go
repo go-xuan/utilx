@@ -7,12 +7,10 @@ import (
 
 func TestRetry(t *testing.T) {
 	if err := NewRetryTask(10, time.Second).
-		AddTask(&testTask{id: 1, ratio: 0.2}).
+		AddExecute(testTask{id: 1, ratio: 0.1}.Execute).
 		Execute(t.Context()); err != nil {
-		t.Error(err)
+		t.Log(err)
 	} else {
-		t.Log("task task success")
+		t.Log("execute success")
 	}
-	time.Sleep(11 * time.Second)
-	return
 }

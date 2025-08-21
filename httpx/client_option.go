@@ -23,7 +23,7 @@ type Settings struct {
 	Proxy   string
 }
 
-func (s *Settings) UniqueId() string {
+func (s *Settings) Unique() string {
 	return fmt.Sprintf("%d_%s_%s", s.Timeout, s.Crt, s.Proxy)
 }
 

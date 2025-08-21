@@ -8,54 +8,52 @@ import (
 )
 
 // NewCronTask 创建定时任务
-func NewCronTask(name, spec string, task Task) *CronTask {
+func NewCronTask(name, spec string, execute Execute) *CronTask {
 	return &CronTask{
-		name: name,
-		spec: spec,
-		task: task,
+		name:    name,
+		spec:    spec,
+		execute: execute,
 	}
 }
 
 // CronTask 定时任务
 type CronTask struct {
-	entry cron.Entry // 定时任务entry
-	name  string     // 任务名
-	spec  string     // 定时任务表达式
-	task  Task       // 任务
-}
-
-// Entry 获取定时任务entry
-func (t *CronTask) Entry() cron.Entry {
-	return t.entry
-}
-
-// Name 获取定时任务名称
-func (t *CronTask) Name() string {
-	return t.name
-}
-
-// Spec 获取定时任务表达式
-func (t *CronTask) Spec() string {
-	return t.spec
+	entry   cron.Entry // 定时任务entry
+	spec    string     // 定时任务表达式
+	name    string     // 任务名
+	execute Execute    // 任务执行函数
 }
 
 // Run 执行定时任务
 func (t *CronTask) Run() {
-	if err := t.task.Execute(context.Background()); err != nil {
-		log.WithField("task_name", t.name).WithError(err).Error("task run failed")
+	if err := t.execute(context.Background()); err != nil {
+		log.WithField("task_name", t.name).WithError(err).Error("execute run failed")
 	}
+}
+
+// GetUnique 获取定时任务名称
+func (t *CronTask) GetUnique() string {
+	return t.name
 }
 
 // Execute 执行定时任务
 func (t *CronTask) Execute(ctx context.Context) error {
-	scheduler := NewCronScheduler()
-	_ = scheduler.Add(t)
-	return scheduler.Execute(ctx)
+	return t.execute(ctx)
+}
+
+// GetSpec 获取定时任务表达式
+func (t *CronTask) GetSpec() string {
+	return t.spec
+}
+
+// GetEntry 获取定时任务entry
+func (t *CronTask) GetEntry() cron.Entry {
+	return t.entry
 }
 
 // Wrap 包装任务
-func (t *CronTask) Wrap(wrapper Wrapper) {
-	t.task = wrapper(t.task)
+func (t *CronTask) Wrap(wrap Wrap) {
+	t.execute = wrap(t.execute)
 }
 
 // GetMeta 获取定时任务元数据

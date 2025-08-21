@@ -14,20 +14,20 @@ var _client *Client // http客户端
 func GetClient() *Client {
 	if _client == nil {
 		_client = &Client{
-			mu:      sync.Mutex{},
+			mu:      sync.RWMutex{},
 			clients: make(map[string]*http.Client),
 		}
 		settings := DefaultSettings()
 		client := settings.NewClient()
 		_client.client = client
-		_client.clients[settings.UniqueId()] = client
+		_client.clients[settings.Unique()] = client
 	}
 	return _client
 }
 
 // Client httpx客户端
 type Client struct {
-	mu      sync.Mutex              // 互斥锁
+	mu      sync.RWMutex            // 读写锁
 	client  *http.Client            // 默认客户端
 	clients map[string]*http.Client // 客户端缓存
 }
@@ -43,10 +43,10 @@ func (c *Client) HttpClient(options ...SettingsOption) *http.Client {
 			option(settings)
 		}
 		var ok bool
-		if client, ok = c.clients[settings.UniqueId()]; !ok {
+		if client, ok = c.clients[settings.Unique()]; !ok {
 			client = settings.NewClient()
 			// 缓存客户端, 后续相同配置的请求直接从缓存中获取
-			c.clients[settings.UniqueId()] = client
+			c.clients[settings.Unique()] = client
 		}
 	}
 	return c.client

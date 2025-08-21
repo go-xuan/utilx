@@ -6,7 +6,7 @@ require (
 	github.com/BurntSushi/toml v1.5.0
 	github.com/go-xuan/typex v1.25.2
 	github.com/google/uuid v1.6.0
-	github.com/magiconair/properties v1.8.6
+	github.com/magiconair/properties v1.8.6 // 1.8.7以上go版本需要升级到1.19
 	github.com/robfig/cron/v3 v3.0.1
 	github.com/sirupsen/logrus v1.9.3
 	github.com/tealeg/xlsx v1.0.5

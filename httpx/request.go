@@ -2,6 +2,7 @@ package httpx
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"io"
 	"mime/multipart"
@@ -14,6 +15,7 @@ import (
 	"github.com/go-xuan/utilx/errorx"
 )
 
+// NewRequest 新建请求
 func NewRequest(method string, url_ string) *Request {
 	return &Request{
 		method:  method,
@@ -35,15 +37,15 @@ type File struct {
 
 // Request 请求器
 type Request struct {
-	method  string
-	url     string
-	trace   string
-	debug   bool
-	headers map[string]string
-	cookies []*http.Cookie
-	form    url.Values
-	files   []*File
-	body    any
+	method  string            // 请求方法
+	url     string            // 请求URL
+	trace   string            // 跟踪ID
+	debug   bool              // 是否开启调试模式
+	headers map[string]string // 请求头
+	cookies []*http.Cookie    // 请求cookie
+	form    url.Values        // 请求表单参数
+	files   []*File           // 请求文件
+	body    any               // 请求体
 }
 
 // Params 添加查询参数
@@ -105,20 +107,21 @@ func (r *Request) Trace(trace string) *Request {
 	return r
 }
 
-func (r *Request) GetBodyReader() (io.Reader, error) {
+func (r *Request) newHttpRequest() (*http.Request, error) {
+	var body io.Reader
 	if r.body != nil {
 		r.headers["Content-Type"] = "application/json"
 		marshal, err := json.Marshal(r.body)
 		if err != nil {
 			return nil, errorx.Wrap(err, "marshal body error")
 		}
-		return bytes.NewReader(marshal), nil
+		body = bytes.NewReader(marshal)
 	} else if len(r.form) > 0 {
 		r.headers["Content-Type"] = "application/x-www-form-urlencoded"
-		return strings.NewReader(r.form.Encode()), nil
+		body = strings.NewReader(r.form.Encode())
 	} else if len(r.files) > 0 {
-		body := &bytes.Buffer{}
-		writer := multipart.NewWriter(body)
+		buffer := &bytes.Buffer{}
+		writer := multipart.NewWriter(buffer)
 
 		for _, file := range r.files {
 			wf, err := writer.CreateFormFile(file.Field, file.Name)
@@ -135,26 +138,27 @@ func (r *Request) GetBodyReader() (io.Reader, error) {
 			}
 		}
 
+		r.headers["Content-Type"] = writer.FormDataContentType()
 		if err := writer.Close(); err != nil {
 			return nil, errorx.Wrap(err, "close multipart writer error")
 		}
-
-		r.headers["Content-Type"] = writer.FormDataContentType()
-		return body, nil
+		body = buffer
 	}
-	return nil, nil
+	// 创建请求
+	request, err := http.NewRequest(r.method, r.url, body)
+	if err != nil {
+		return nil, errorx.Wrap(err, "new request error")
+	}
+	return request, nil
 }
 
 // Send 发送请求
 func (r *Request) Send(options ...SettingsOption) (*Response, error) {
-	body, err := r.GetBodyReader()
+	request, err := r.newHttpRequest()
 	if err != nil {
-		return nil, errorx.Wrap(err, "get body reader error")
-	}
-	var request *http.Request
-	if request, err = http.NewRequest(r.method, r.url, body); err != nil {
 		return nil, errorx.Wrap(err, "new request error")
 	}
+
 	// 设置请求头
 	if r.headers != nil && len(r.headers) > 0 {
 		for key, val := range r.headers {
@@ -182,4 +186,9 @@ func (r *Request) Send(options ...SettingsOption) (*Response, error) {
 		logger.Printf("http_body: %s", string(response.Body()))
 	}
 	return response, nil
+}
+
+func (r *Request) Execute(ctx context.Context) error {
+	_, err := r.Send()
+	return err
 }

@@ -2,50 +2,46 @@ package idx
 
 import (
 	"sync"
-	
+
 	"github.com/go-xuan/typex"
 )
 
-var seqManager *SeqManager
+var sequencePool *SequencePool
 
-type SeqManager struct {
-	Pool *typex.Enum[string, *sequence]
-}
-
-func Sequence() *SeqManager {
-	if seqManager == nil {
-		seqManager = &SeqManager{
-			Pool: typex.NewStringEnum[*sequence](),
+// GetSequencePool 获取序列池
+func GetSequencePool() *SequencePool {
+	if sequencePool == nil {
+		sequencePool = &SequencePool{
+			Pool: typex.NewStringEnum[*Sequence](),
 		}
 	}
-	return seqManager
+	return sequencePool
+}
+
+// SequencePool 序列池
+type SequencePool struct {
+	Pool *typex.Enum[string, *Sequence]
 }
 
 // Create 创建序列
-func (m *SeqManager) Create(name string, start int, incr int) {
-	m.Pool.Add(name, &sequence{
-		new(sync.RWMutex),
-		name,
-		start,
-		incr,
-		start},
-	)
+func (m *SequencePool) Create(name string, start, incr int64) {
+	m.Pool.Add(name, NewSequence(name, start, incr))
 }
 
 // CurrVal 获取序列当前值
-func (m *SeqManager) CurrVal(name string) int {
-	if seq := m.Pool.Get(name); seq != nil {
-		return seq.curr()
+func (m *SequencePool) CurrVal(name string) int64 {
+	if sequence := m.Pool.Get(name); sequence != nil {
+		return sequence.Curr()
 	} else {
 		m.Create(name, 0, 1)
 		return 0
 	}
 }
 
-// NextVal 获取序列下值
-func (m *SeqManager) NextVal(name string) int {
-	if seq := m.Pool.Get(name); seq != nil {
-		return seq.next()
+// NextVal 获取序列下一个值
+func (m *SequencePool) NextVal(name string) int64 {
+	if sequence := m.Pool.Get(name); sequence != nil {
+		return sequence.Next()
 	} else {
 		m.Create(name, 1, 1)
 		return 1
@@ -53,68 +49,84 @@ func (m *SeqManager) NextVal(name string) int {
 }
 
 // NextBatch 获取序列当前值
-func (m *SeqManager) NextBatch(name string, n int) int {
-	if seq := m.Pool.Get(name); seq != nil {
-		var next = seq.next()
-		seq.set(next + (n-1)*seq.increment)
+func (m *SequencePool) NextBatch(name string, size int64) int64 {
+	if sequence := m.Pool.Get(name); sequence != nil {
+		var next = sequence.Next()
+		sequence.Set(next + (size-1)*sequence.incr)
 		return next
 	} else {
-		m.Create(name, n+1, 1)
+		m.Create(name, size+1, 1)
 		return 1
 	}
 }
 
 // Set 设置序列当前值
-func (m *SeqManager) Set(name string, value int) {
-	if seq := m.Pool.Get(name); seq != nil {
-		seq.set(value)
+func (m *SequencePool) Set(name string, value int64) {
+	if sequence := m.Pool.Get(name); sequence != nil {
+		sequence.Set(value)
 	} else {
 		m.Create(name, value, 1)
 	}
 }
 
 // Reset 序列重置
-func (m *SeqManager) Reset(name string) {
-	if seq := m.Pool.Get(name); seq != nil {
-		seq.reset()
+func (m *SequencePool) Reset(name string) {
+	if sequence := m.Pool.Get(name); sequence != nil {
+		sequence.Reset()
 	} else {
 		m.Create(name, 0, 1)
 	}
 }
 
-type sequence struct {
-	*sync.RWMutex
-	name      string // 序列名
-	start     int    // 开始值
-	increment int    // 递增值
-	val       int    // 序列号
-}
-
-func (seq *sequence) curr() int {
-	seq.RLock()
-	defer seq.RUnlock()
-	return seq.val
-}
-
-func (seq *sequence) next() int {
-	seq.Lock()
-	defer seq.Unlock()
-	seq.val += seq.increment
-	return seq.val
-}
-
-func (seq *sequence) reset() {
-	seq.Lock()
-	defer seq.Unlock()
-	seq.val = seq.start
-}
-
-func (seq *sequence) set(v int) {
-	seq.Lock()
-	defer seq.Unlock()
-	if v < seq.start {
-		seq.val = seq.start
-	} else {
-		seq.val = v
+// NewSequence 新建序列
+func NewSequence(name string, start, incr int64) *Sequence {
+	return &Sequence{
+		sync.RWMutex{},
+		name,
+		start,
+		incr,
+		start,
 	}
+}
+
+// Sequence 序列
+type Sequence struct {
+	sync.RWMutex        // 读写锁
+	name         string // 序列名
+	start        int64  // 开始值
+	incr         int64  // 递增值
+	val          int64  // 序列号
+}
+
+// Next 获取序列值
+func (s *Sequence) Next() int64 {
+	s.Lock()
+	defer s.Unlock()
+	s.val += s.incr
+	return s.val
+}
+
+// Curr 获取序列当前值
+func (s *Sequence) Curr() int64 {
+	s.RLock()
+	defer s.RUnlock()
+	return s.val
+}
+
+// Set 设置序列当前值
+func (s *Sequence) Set(v int64) {
+	s.Lock()
+	defer s.Unlock()
+	if v < s.start {
+		s.val = s.start
+	} else {
+		s.val = v
+	}
+}
+
+// Reset 序列重置
+func (s *Sequence) Reset() {
+	s.Lock()
+	defer s.Unlock()
+	s.val = s.start
 }
