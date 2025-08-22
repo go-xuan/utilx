@@ -40,12 +40,13 @@ func (s *QueueScheduler) Execute(ctx context.Context) error {
 		if current.next != nil {
 			logger = logger.WithField("next_task_name", current.next.name)
 		}
+
 		// 执行当前任务
-		logger.Info("queue execute execute")
 		if err := current.Execute(ctx); err != nil {
-			logger.WithField("error", err.Error()).Error("queue execute execute error")
-			return errorx.Wrap(err, "queue execute execute error")
+			logger.WithField("error", err.Error()).Error("queue execute error")
+			return errorx.Wrap(err, "queue execute error")
 		}
+		logger.Info("queue execute success")
 
 		// 从任务列表中删除当前任务并更新当前任务指针
 		delete(s.tasks, current.name)
