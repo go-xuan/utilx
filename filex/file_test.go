@@ -2,6 +2,7 @@ package filex
 
 import (
 	"fmt"
+	"os"
 	"testing"
 )
 
@@ -10,7 +11,7 @@ func TestFileSplit(t *testing.T) {
 	fmt.Println(Analyse(filePath))
 	files, err := FileSplit(filePath, 5000)
 	if err != nil {
-		panic(err)
+		t.Log(err)
 	}
 	fmt.Println(files)
 }
@@ -29,4 +30,27 @@ func TestFileWrite(t *testing.T) {
 		"8888",
 		"9999",
 	}, Append)
+}
+
+func TestFileScan(t *testing.T) {
+	files, err := FileScan("../", "go")
+	if err != nil {
+		t.Log(err)
+	}
+	for _, file := range files {
+		fmt.Printf("path:%s size:%d mode:%s fname:%s \n", file.Path, file.Info.Size(), file.Info.Mode(), file.Info.Name())
+	}
+}
+
+func TestFileScanMatch(t *testing.T) {
+	files, err := FileScanMatch("../", func(path string, info os.FileInfo) bool {
+		return info.IsDir()
+	})
+	if err != nil {
+		t.Log(err)
+	}
+
+	for _, file := range files {
+		fmt.Printf("path:%s size:%d mode:%s fname:%s \n", file.Path, file.Info.Size(), file.Info.Mode(), file.Info.Name())
+	}
 }

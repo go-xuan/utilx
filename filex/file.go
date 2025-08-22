@@ -358,7 +358,7 @@ type File struct {
 	Info os.FileInfo
 }
 
-// FileScan 获取目录下所有文件路径
+// FileScan 文件扫描
 func FileScan(dir string, keyword string) ([]*File, error) {
 	var files []*File
 	if err := filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
@@ -378,6 +378,23 @@ func FileScan(dir string, keyword string) ([]*File, error) {
 		return nil
 	}); err != nil {
 		return nil, errorx.Wrap(err, "file scan error")
+	}
+	return files, nil
+}
+
+// FileScanMatch 文件扫描匹配
+func FileScanMatch(dir string, match func(path string, info os.FileInfo) bool) ([]*File, error) {
+	var files []*File
+	if err := filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		if match(path, info) {
+			files = append(files, &File{Path: path, Info: info})
+		}
+		return nil
+	}); err != nil {
+		return nil, errorx.Wrap(err, "file scan match error")
 	}
 	return files, nil
 }
