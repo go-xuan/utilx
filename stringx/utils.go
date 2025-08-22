@@ -258,30 +258,19 @@ func HasEmpty(str ...string) bool {
 }
 
 // Default 用于函数中的不定参数取默认值
-func Default(def string, x ...string) string {
-	if len(x) > 0 && x[0] != "" {
-		return x[0]
-	} else {
-		return def
+func Default(def string, variable ...string) string {
+	if len(variable) > 0 && variable[0] != "" {
+		return variable[0]
 	}
-}
-
-// IfNot 不等时取默认值
-func IfNot(str, value, def string) string {
-	if str != value {
-		return def
-	} else {
-		return str
-	}
+	return def
 }
 
 // IfZero 为空时取默认值
-func IfZero(str, def string) string {
-	if str == "" {
+func IfZero(value, def string) string {
+	if value == "" {
 		return def
-	} else {
-		return str
 	}
+	return value
 }
 
 // Reverse 反转
