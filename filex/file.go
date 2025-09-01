@@ -222,6 +222,11 @@ func Pwd(path ...string) string {
 	}
 }
 
+// Depth 获取路径深度
+func Depth(path string) int {
+	return strings.Count(filepath.Clean(path), string(filepath.Separator))
+}
+
 // SplitPath 拆分为文件路径和文件名
 func SplitPath(path string) (string, string) {
 	if path != "" {
@@ -383,9 +388,9 @@ func FileScan(dir string, keyword string) ([]*File, error) {
 }
 
 // FileScanMatch 文件扫描匹配
-func FileScanMatch(dir string, match func(path string, info os.FileInfo) bool) ([]*File, error) {
+func FileScanMatch(root string, match func(path string, info os.FileInfo) bool) ([]*File, error) {
 	var files []*File
-	if err := filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
+	if err := filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}

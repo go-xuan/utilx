@@ -39,44 +39,41 @@ func (s *Splitter) Execute(ctx context.Context, total int, execute func(ctx cont
 func NewSplitterTask[T any](limit int) *SplitterTask[T] {
 	return &SplitterTask[T]{
 		Splitter: *NewSplitter(limit),
-		list:     make([]T, 0),
+		tasks:    make([]T, 0),
 	}
 }
 
 // SplitterTask 多任务拆分执行
 type SplitterTask[T any] struct {
-	Splitter                 // 并发策略
-	list     []T             // 所有待处理任务
-	execute  BatchExecute[T] // 批量执行函数
+	Splitter                     // 并发策略
+	tasks        []T             // 所有待处理任务
+	batchExecute BatchExecute[T] // 批量执行函数
 }
 
-func (t *SplitterTask[T]) Add(v T) *SplitterTask[T] {
-	t.list = append(t.list, v)
-	return t
-}
-
-func (t *SplitterTask[T]) SetList(list []T) *SplitterTask[T] {
-	t.list = list
+func (t *SplitterTask[T]) AddTask(tasks ...T) *SplitterTask[T] {
+	if len(tasks) > 0 {
+		t.tasks = append(t.tasks, tasks...)
+	}
 	return t
 }
 
 func (t *SplitterTask[T]) SetExecute(execute BatchExecute[T]) *SplitterTask[T] {
-	t.execute = execute
+	t.batchExecute = execute
 	return t
 }
 
 func (t *SplitterTask[T]) Execute(ctx context.Context) error {
-	if len(t.list) == 0 {
-		return errorx.New("splitter list is nil")
+	if len(t.tasks) == 0 {
+		return errorx.New("splitter tasks is nil")
 	}
-	if t.execute == nil {
-		return errorx.New("splitter execute is nil")
+	if t.batchExecute == nil {
+		return errorx.New("splitter batch execute is nil")
 	}
 
 	// 并发执行子任务
-	return t.Splitter.Execute(ctx, len(t.list), func(ctx context.Context, start, end, batch int) error {
+	return t.Splitter.Execute(ctx, len(t.tasks), func(ctx context.Context, start, end, batch int) error {
 		logger := log.WithField("batch", batch).WithField("start", start).WithField("end", end)
-		if err := t.execute(ctx, t.list[start:end]); err != nil {
+		if err := t.batchExecute(ctx, t.tasks[start:end]); err != nil {
 			logger.WithError(err).Error("batch execute error")
 			return err
 		}

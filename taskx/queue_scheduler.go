@@ -65,14 +65,14 @@ func (s *QueueScheduler) AddTail(name string, execute Execute) {
 	logger := log.WithField("add_task", name).
 		WithField("add_position", "queue_tail")
 	if name == "" || execute == nil {
-		logger.Error("task name is empty or task execute is nil")
+		logger.Error("tasks name is empty or tasks execute is nil")
 		return
 	}
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
 	if s.cover(name, execute) {
-		logger.Error("queue add tail failed: task already exists")
+		logger.Error("queue add tail failed: tasks already exists")
 		return
 	}
 
@@ -97,14 +97,14 @@ func (s *QueueScheduler) AddHead(name string, execute Execute) {
 	logger := log.WithField("add_task", name).
 		WithField("add_position", "queue_head")
 	if name == "" || execute == nil {
-		logger.Error("task name is empty or task execute is nil")
+		logger.Error("tasks name is empty or tasks execute is nil")
 		return
 	}
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
 	if s.cover(name, execute) {
-		logger.Error("queue add head failed: task already exists")
+		logger.Error("queue add head failed: tasks already exists")
 		return
 	}
 
@@ -128,7 +128,7 @@ func (s *QueueScheduler) AddAfter(base, name string, execute Execute) {
 	logger := log.WithField("add_task", name).WithField("base_task", base).
 		WithField("add_position", "after_of_base_task")
 	if name == "" || execute == nil {
-		logger.Error("task name is empty or task execute is nil")
+		logger.Error("tasks name is empty or tasks execute is nil")
 		return
 	}
 
@@ -136,13 +136,13 @@ func (s *QueueScheduler) AddAfter(base, name string, execute Execute) {
 	defer s.mutex.Unlock()
 
 	if s.cover(name, execute) {
-		logger.Error("queue add after failed: task already exists")
+		logger.Error("queue add after failed: tasks already exists")
 		return
 	}
 
 	baseTask, ok := s.tasks[base]
 	if !ok {
-		logger.Error("queue add after failed: base task not exist")
+		logger.Error("queue add after failed: base tasks not exist")
 		return
 	}
 
@@ -166,20 +166,20 @@ func (s *QueueScheduler) AddBefore(base, name string, execute Execute) {
 	logger := log.WithField("add_task", name).WithField("base_task", base).
 		WithField("add_position", "before_of_base_task")
 	if name == "" || execute == nil {
-		logger.Error("task name is empty or task execute is nil")
+		logger.Error("tasks name is empty or tasks execute is nil")
 		return
 	}
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
 	if s.cover(name, execute) {
-		logger.Error("queue add before failed: task already exists")
+		logger.Error("queue add before failed: tasks already exists")
 		return
 	}
 
 	baseTask, ok := s.tasks[base]
 	if !ok {
-		logger.Error("queue add before failed: base task not exist")
+		logger.Error("queue add before failed: base tasks not exist")
 		return
 	}
 

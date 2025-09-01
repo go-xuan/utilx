@@ -7,9 +7,9 @@ import (
 )
 
 func TestConcurrent(t *testing.T) {
-	concurrencyTask := NewConcurrencyTask(10).SetCallback(ErrorLogCallback)
+	concurrencyTask := NewConcurrencyTask(10).AddResultHook(ErrorLogHook)
 	for i := 0; i < 20; i++ {
-		concurrencyTask.AddExecute(testTask{id: i, ratio: 0.5}.Execute)
+		concurrencyTask.AddTask(testTask{id: i, ratio: 0.5})
 	}
 	if err := concurrencyTask.Execute(context.Background()); err != nil {
 		t.Log(err)
@@ -17,9 +17,9 @@ func TestConcurrent(t *testing.T) {
 }
 
 func TestConcurrentAndRetry(t *testing.T) {
-	concurrencyTask := NewConcurrencyTask(5).SetCallback(RetryCallback(3, time.Second))
+	concurrencyTask := NewConcurrencyTask(5).AddResultHook(NewRetry(3, time.Second).ResultHook)
 	for i := 0; i < 20; i++ {
-		concurrencyTask.AddExecute(testTask{id: i, ratio: 0.5}.Execute)
+		concurrencyTask.AddTask(testTask{id: i, ratio: 0.5})
 	}
 	if err := concurrencyTask.Execute(context.Background()); err != nil {
 		t.Log(err)

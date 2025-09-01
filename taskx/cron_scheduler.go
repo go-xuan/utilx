@@ -13,7 +13,7 @@ const (
 	initializationStatus = iota // 初始化
 	readinessStatus             // 待运行
 	runningStatus               // 运行中
-	stopStatus                  // 停止
+	stoppedStatus               // 停止
 )
 
 // NewCronScheduler 定时任务调度器
@@ -26,11 +26,11 @@ func NewCronScheduler(wraps ...Wrap) *CronScheduler {
 			cron.WithChain(cron.SkipIfStillRunning(cron.DefaultLogger)),
 			cron.WithLogger(cron.DefaultLogger),
 		),
-		names:   []string{},
-		tasks:   make(map[string]*CronTask),
-		wrapper: &Wrapper{wraps: make([]Wrap, 0)},
+		names: []string{},
+		tasks: make(map[string]*CronTask),
+		wraps: make([]Wrap, 0),
 	}
-	scheduler.wrapper.Add(wraps...)
+	scheduler.AddWrap(wraps...)
 	return scheduler
 }
 
@@ -52,18 +52,17 @@ func ParseDurationBySpec(spec string) time.Duration {
 
 // CronScheduler 定时任务调度器
 type CronScheduler struct {
-	mutex   *sync.Mutex          // 互斥锁
-	cron    *cron.Cron           // corn对象
-	status  uint                 // 调度器状态（0-初始化；1-待运行；2-运行中；3-停止）
-	names   []string             // 任务名称
-	tasks   map[string]*CronTask // 定时任务
-	wrapper *Wrapper             // 定时任务包装器
+	mutex  *sync.Mutex          // 互斥锁
+	cron   *cron.Cron           // corn对象
+	status uint                 // 调度器状态（0-初始化；1-待运行；2-运行中；3-停止）
+	names  []string             // 任务名称
+	tasks  map[string]*CronTask // 定时任务
+	wraps  []Wrap               // 定时任务包装器
 }
 
 // AddWrap 添加包装器
-func (s *CronScheduler) AddWrap(wraps ...Wrap) error {
-	s.wrapper.Add(wraps...)
-	return nil
+func (s *CronScheduler) AddWrap(wraps ...Wrap) {
+	s.wraps = append(s.wraps, wraps...)
 }
 
 // AddTask 添加定时任务
@@ -79,12 +78,8 @@ func (s *CronScheduler) AddTask(task *CronTask) *CronScheduler {
 		s.cron.Remove(old.entry.ID)
 	}
 
-	// 遍历装饰器，对任务执行方法进行包装
-	if wraps := s.wrapper.wraps; wraps != nil {
-		for _, wrap := range wraps {
-			task.Wrap(wrap)
-		}
-	}
+	// 遍历装饰器，对任务执行函数进行包装
+	task.Wrap(s.wraps...)
 
 	// 添加定时任务
 	entryId, err := s.cron.AddJob(spec, task)
@@ -122,11 +117,10 @@ func (s *CronScheduler) Remove(name string) error {
 	return nil
 }
 
-// Execute 开始调度定时任务
 func (s *CronScheduler) Execute(ctx context.Context) error {
 	switch s.status {
 	case initializationStatus:
-		return errorx.New("please add the GetExecute first")
+		return errorx.New("please add task first")
 	case runningStatus:
 		return errorx.New("the cron scheduler already running")
 	default:
@@ -141,11 +135,11 @@ func (s *CronScheduler) Stop() error {
 	switch s.status {
 	case initializationStatus, readinessStatus:
 		return errorx.New("the cron scheduler is not running yet")
-	case stopStatus:
+	case stoppedStatus:
 		return errorx.New("the cron scheduler has stopped")
 	default:
 		s.cron.Stop()
-		s.status = stopStatus
+		s.status = stoppedStatus
 		return nil
 	}
 }
@@ -158,7 +152,7 @@ func (s *CronScheduler) Status() string {
 		return "readiness"
 	case runningStatus:
 		return "running"
-	case stopStatus:
+	case stoppedStatus:
 		return "stopped"
 	default:
 		return "unknown"

@@ -27,7 +27,7 @@ type CronTask struct {
 // Run 执行定时任务
 func (t *CronTask) Run() {
 	if err := t.execute(context.Background()); err != nil {
-		log.WithField("task_name", t.name).WithError(err).Error("execute run failed")
+		log.WithField("task_name", t.name).WithError(err).Error("execute failed")
 	}
 }
 
@@ -36,7 +36,6 @@ func (t *CronTask) GetUnique() string {
 	return t.name
 }
 
-// Execute 执行定时任务
 func (t *CronTask) Execute(ctx context.Context) error {
 	return t.execute(ctx)
 }
@@ -51,9 +50,16 @@ func (t *CronTask) GetEntry() cron.Entry {
 	return t.entry
 }
 
-// Wrap 包装任务
-func (t *CronTask) Wrap(wrap Wrap) {
-	t.execute = wrap(t.execute)
+// Wrap 包装定时任务执行函数
+func (t *CronTask) Wrap(wraps ...Wrap) {
+	if t.execute == nil || len(wraps) == 0 {
+		return
+	}
+	execute := t.execute
+	for _, wrap := range wraps {
+		execute = wrap(execute)
+	}
+	t.execute = execute
 }
 
 // GetMeta 获取定时任务元数据
