@@ -4,8 +4,9 @@ import (
 	"context"
 	"sync"
 
-	"github.com/go-xuan/utilx/errorx"
 	log "github.com/sirupsen/logrus"
+	
+	"github.com/go-xuan/utilx/errorx"
 )
 
 // NewQueueScheduler 队列任务处理调度器
@@ -76,7 +77,7 @@ func (s *QueueScheduler) AddTail(name string, execute Execute) {
 		return
 	}
 
-	newTask := &QueueTask{name: name, execute: execute}
+	newTask := NewQueueTask(execute, name)
 	if s.tail != nil {
 		// 队列不为空，将新任务添加到尾部
 		newTask.prev = s.tail
@@ -108,7 +109,7 @@ func (s *QueueScheduler) AddHead(name string, execute Execute) {
 		return
 	}
 
-	newTask := &QueueTask{name: name, execute: execute}
+	newTask := NewQueueTask(execute, name)
 	if s.head != nil {
 		// 队列已有任务，将新任务插入到头部
 		s.head.prev = newTask
@@ -146,18 +147,18 @@ func (s *QueueScheduler) AddAfter(base, name string, execute Execute) {
 		return
 	}
 
-	afterTask := &QueueTask{name: name, execute: execute}
+	newTask := NewQueueTask(execute, name)
 	if baseTask.next != nil { // 目标任务存在且不是队尾，则插入到目标任务之后
-		afterTask.next = baseTask.next
-		afterTask.prev = baseTask
-		baseTask.next.prev = afterTask
-		baseTask.next = afterTask
+		newTask.next = baseTask.next
+		newTask.prev = baseTask
+		baseTask.next.prev = newTask
+		baseTask.next = newTask
 	} else { // 插入当前队尾之后
-		baseTask.next = afterTask
-		afterTask.prev = baseTask
-		s.tail = afterTask
+		baseTask.next = newTask
+		newTask.prev = baseTask
+		s.tail = newTask
 	}
-	s.tasks[name] = afterTask
+	s.tasks[name] = newTask
 	logger.Info("queue add after success")
 }
 
@@ -183,18 +184,18 @@ func (s *QueueScheduler) AddBefore(base, name string, execute Execute) {
 		return
 	}
 
-	beforeTask := &QueueTask{name: name, execute: execute}
+	newTask := NewQueueTask(execute, name)
 	if baseTask.prev != nil { // 目标任务不是队列头部，插入到目标任务之前
-		beforeTask.prev = baseTask.prev
-		beforeTask.next = baseTask
-		baseTask.prev.next = beforeTask
-		baseTask.prev = beforeTask
+		newTask.prev = baseTask.prev
+		newTask.next = baseTask
+		baseTask.prev.next = newTask
+		baseTask.prev = newTask
 	} else { // 目标任务是队列头部，新任务成为新的头部
-		beforeTask.next = baseTask
-		baseTask.prev = beforeTask
-		s.head = beforeTask
+		newTask.next = baseTask
+		baseTask.prev = newTask
+		s.head = newTask
 	}
-	s.tasks[name] = beforeTask
+	s.tasks[name] = newTask
 	logger.Info("queue add before success")
 }
 

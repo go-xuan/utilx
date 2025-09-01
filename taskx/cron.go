@@ -5,22 +5,27 @@ import (
 
 	"github.com/robfig/cron/v3"
 	log "github.com/sirupsen/logrus"
+
+	"github.com/go-xuan/utilx/errorx"
+	"github.com/go-xuan/utilx/idx"
 )
 
 // NewCronTask 创建定时任务
-func NewCronTask(name, spec string, execute Execute) *CronTask {
-	return &CronTask{
-		name:    name,
-		spec:    spec,
-		execute: execute,
+func NewCronTask(spec string, execute Execute, name ...string) *CronTask {
+	var name_ string
+	if len(name) > 0 {
+		name_ = name[0]
+	} else {
+		name_ = idx.SnowFlake().String()
 	}
+	return &CronTask{name: name_, spec: spec, execute: execute}
 }
 
 // CronTask 定时任务
 type CronTask struct {
 	entry   cron.Entry // 定时任务entry
-	spec    string     // 定时任务表达式
 	name    string     // 任务名
+	spec    string     // 定时任务表达式
 	execute Execute    // 任务执行函数
 }
 
@@ -33,11 +38,21 @@ func (t *CronTask) Run() {
 
 // GetUnique 获取定时任务名称
 func (t *CronTask) GetUnique() string {
-	return t.name
+	return t.GetName()
 }
 
 func (t *CronTask) Execute(ctx context.Context) error {
-	return t.execute(ctx)
+	logger := log.WithField("task_type", "cron").WithField("task_name", t.name)
+	if err := t.execute(ctx); err != nil {
+		logger.WithError(err).Error("cron task execute error")
+		return errorx.New("cron task execute error")
+	}
+	logger.Info("cron task execute success")
+	return nil
+}
+
+func (t *CronTask) GetName() string {
+	return t.name
 }
 
 // GetSpec 获取定时任务表达式
@@ -52,14 +67,11 @@ func (t *CronTask) GetEntry() cron.Entry {
 
 // Wrap 包装定时任务执行函数
 func (t *CronTask) Wrap(wraps ...Wrap) {
-	if t.execute == nil || len(wraps) == 0 {
-		return
+	if t.execute != nil && len(wraps) > 0 {
+		for _, wrap := range wraps {
+			t.execute = wrap(t.execute)
+		}
 	}
-	execute := t.execute
-	for _, wrap := range wraps {
-		execute = wrap(execute)
-	}
-	t.execute = execute
 }
 
 // GetMeta 获取定时任务元数据

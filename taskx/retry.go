@@ -5,8 +5,10 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/go-xuan/utilx/errorx"
 	log "github.com/sirupsen/logrus"
+
+	"github.com/go-xuan/utilx/errorx"
+	"github.com/go-xuan/utilx/idx"
 )
 
 // NewRetry 新建重试策略
@@ -55,17 +57,20 @@ func (r *Retry) ResultHook(result Result) {
 }
 
 // NewRetryTask 创建重试任务调度器
-func NewRetryTask(name string, retry *Retry) *RetryTask {
-	return &RetryTask{
-		name:  name,
-		retry: retry,
+func NewRetryTask(times int, interval time.Duration, name ...string) *RetryTask {
+	var name_ string
+	if len(name) > 0 {
+		name_ = name[0]
+	} else {
+		name_ = idx.SnowFlake().String()
 	}
+	return &RetryTask{retry: NewRetry(times, interval), name: name_}
 }
 
 // RetryTask 重试任务调度器
 type RetryTask struct {
-	retry   *Retry  // 重试策略
 	name    string  // 任务名
+	retry   *Retry  // 重试策略
 	execute Execute // 任务执行函数
 }
 
@@ -74,15 +79,19 @@ func (s *RetryTask) GetUnique() string {
 }
 
 func (s *RetryTask) Execute(ctx context.Context) error {
+	logger := log.WithField("task_type", "retry").WithField("task_name", s.name)
 	if s.execute == nil {
+		logger.Error("retry execute is nil")
 		return errorx.New("retry execute is nil")
 	}
 	if s.retry == nil {
-		return s.execute(ctx)
+		return errorx.New("retry is nil")
 	}
 	if err := s.retry.Execute(ctx, s.execute); err != nil {
-		return errorx.Wrap(err, "retry execute failed")
+		logger.WithError(err).Error("retry task execute error")
+		return errorx.Wrap(err, "retry task execute error")
 	}
+	logger.Info("retry task execute success")
 	return nil
 }
 

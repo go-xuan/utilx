@@ -27,7 +27,7 @@ func TestSplitterTask(t *testing.T) {
 		s = append(s, i)
 	}
 	task := NewSplitterTask[int](17)
-	if err := task.AddTask(s...).SetExecute(func(ctx context.Context, tasks []int) error {
+	if err := task.AddTask(s...).SetBatchExecute(func(ctx context.Context, tasks []int) error {
 		fmt.Printf("%v \n", tasks)
 		return nil
 	}).Execute(t.Context()); err != nil {

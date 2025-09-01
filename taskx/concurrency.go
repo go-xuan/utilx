@@ -4,7 +4,10 @@ import (
 	"context"
 	"sync"
 
+	log "github.com/sirupsen/logrus"
+
 	"github.com/go-xuan/utilx/errorx"
+	"github.com/go-xuan/utilx/idx"
 	"github.com/go-xuan/utilx/marshalx"
 )
 
@@ -78,27 +81,40 @@ func (c *Concurrency) Execute(ctx context.Context, tasks []Task, hooks ...Result
 }
 
 // NewConcurrencyTask 创建并发执行任务
-func NewConcurrencyTask(size int) *ConcurrencyTask {
-	return &ConcurrencyTask{
-		concurrency: NewConcurrency(size),
-		tasks:       make([]Task, 0),
-		hooks:       make([]ResultHook, 0),
+func NewConcurrencyTask(size int, name ...string) *ConcurrencyTask {
+	var name_ string
+	if len(name) > 0 {
+		name_ = name[0]
+	} else {
+		name_ = idx.SnowFlake().String()
 	}
+	return &ConcurrencyTask{name: name_, concurrency: NewConcurrency(size), tasks: make([]Task, 0), hooks: make([]ResultHook, 0)}
 }
 
 // ConcurrencyTask 并发执行任务
 type ConcurrencyTask struct {
+	name        string       // 任务名
 	concurrency *Concurrency // 并发策略
 	tasks       []Task       // 任务执行函数列表
 	hooks       []ResultHook // 结果回调函数
 }
 
+func (t *ConcurrencyTask) GetUnique() string {
+	return t.name
+}
+
 func (t *ConcurrencyTask) Execute(ctx context.Context) error {
+	logger := log.WithField("task_type", "concurrency").WithField("task_name", t.name)
 	if len(t.tasks) == 0 {
+		logger.Error("concurrency tasks is nil")
 		return errorx.New("concurrency tasks is nil")
+	}
+	if t.concurrency == nil {
+		return errorx.New("concurrency is nil")
 	}
 	// 并发执行子任务
 	t.concurrency.Execute(ctx, t.tasks, t.hooks...)
+	logger.Infof("concurrency task execute finished")
 	return nil
 }
 

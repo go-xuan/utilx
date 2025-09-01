@@ -53,6 +53,6 @@ func (r *TaskResult) GetError() error {
 // ErrorLogHook 错误日志钩子函数
 func ErrorLogHook(result Result) {
 	if err := result.GetError(); err != nil {
-		log.WithError(err).Error("任务执行失败")
+		log.WithError(err).Error("task execute error")
 	}
 }
