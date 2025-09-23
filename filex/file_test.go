@@ -38,7 +38,7 @@ func TestFileScan(t *testing.T) {
 		t.Log(err)
 	}
 	for _, file := range files {
-		fmt.Printf("path:%s size:%d mode:%s fname:%s \n", file.Path, file.Info.Size(), file.Info.Mode(), file.Info.Name())
+		fmt.Printf("path:%s size:%dB mode:%s fname:%s \n", file.Path, file.Info.Size(), file.Info.Mode(), file.Info.Name())
 	}
 }
 
@@ -51,6 +51,6 @@ func TestFileScanMatch(t *testing.T) {
 	}
 
 	for _, file := range files {
-		fmt.Printf("path:%s size:%d mode:%s fname:%s \n", file.Path, file.Info.Size(), file.Info.Mode(), file.Info.Name())
+		fmt.Printf("path:%s size:%dB mode:%s fname:%s \n", file.Path, file.Info.Size(), file.Info.Mode(), file.Info.Name())
 	}
 }

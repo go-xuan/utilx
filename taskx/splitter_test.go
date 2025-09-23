@@ -8,29 +8,37 @@ import (
 
 func TestSplitter(t *testing.T) {
 	var total = 200
-	var s []int
+	var tasks []int
 	for i := 1; i <= total; i++ {
-		s = append(s, i)
+		tasks = append(tasks, i)
 	}
-	if err := NewSplitter(17).Execute(t.Context(), total, func(ctx context.Context, start, end, batch int) error {
-		fmt.Printf("%d ==> [%d:%d] ==> %v \n", batch, start, end, s[start:end])
+	splitter := NewSplitter(17)
+	
+	execute := func(ctx context.Context, start, end, batch int) error {
+		fmt.Printf("%d ==> [%d:%d] ==> %v \n", batch, start, end, tasks[start:end])
 		return nil
-	}); err != nil {
+	}
+
+	if err := splitter.Execute(t.Context(), total, execute); err != nil {
 		t.Log(err)
 	}
 }
 
-func TestSplitterTask(t *testing.T) {
+func TestSplitterScheduler(t *testing.T) {
 	var total = 200
-	var s []int
+	var tasks []int
 	for i := 1; i <= total; i++ {
-		s = append(s, i)
+		tasks = append(tasks, i)
 	}
-	task := NewSplitterTask[int](17)
-	if err := task.AddTask(s...).SetBatchExecute(func(ctx context.Context, tasks []int) error {
-		fmt.Printf("%v \n", tasks)
+	execute := func(ctx context.Context, ints []int) error {
+		// 打印数字
+		fmt.Printf("%v \n", ints)
 		return nil
-	}).Execute(t.Context()); err != nil {
+	}
+
+	scheduler := NewSplitterScheduler("splitter", NewSplitter(17), tasks...).SetBatchExecute(execute)
+
+	if err := scheduler.Execute(t.Context()); err != nil {
 		t.Log(err)
 	}
 }

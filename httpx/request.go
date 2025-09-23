@@ -2,7 +2,6 @@ package httpx
 
 import (
 	"bytes"
-	"context"
 	"encoding/json"
 	"io"
 	"mime/multipart"
@@ -107,13 +106,13 @@ func (r *Request) Trace(trace string) *Request {
 	return r
 }
 
-func (r *Request) newHttpRequest() (*http.Request, error) {
+func (r *Request) NewHttpRequest() (*http.Request, error) {
 	var body io.Reader
 	if r.body != nil {
 		r.headers["Content-Type"] = "application/json"
 		marshal, err := json.Marshal(r.body)
 		if err != nil {
-			return nil, errorx.Wrap(err, "marshal body error")
+			return nil, errorx.Wrap(err, "marshal Body error")
 		}
 		body = bytes.NewReader(marshal)
 	} else if len(r.form) > 0 {
@@ -149,16 +148,6 @@ func (r *Request) newHttpRequest() (*http.Request, error) {
 	if err != nil {
 		return nil, errorx.Wrap(err, "new request error")
 	}
-	return request, nil
-}
-
-// Send 发送请求
-func (r *Request) Send(options ...SettingsOption) (*Response, error) {
-	request, err := r.newHttpRequest()
-	if err != nil {
-		return nil, errorx.Wrap(err, "new request error")
-	}
-
 	// 设置请求头
 	if r.headers != nil && len(r.headers) > 0 {
 		for key, val := range r.headers {
@@ -171,24 +160,31 @@ func (r *Request) Send(options ...SettingsOption) (*Response, error) {
 			request.AddCookie(cookie)
 		}
 	}
+	return request, nil
+}
+
+// Send 发送请求
+func (r *Request) Send(options ...SettingsOption) (*Response, error) {
+	request, err := r.NewHttpRequest()
+	if err != nil {
+		return nil, errorx.Wrap(err, "new request error")
+	}
 	// 发送请求
 	var response *Response
 	if response, err = GetClient().Do(request, options...); err != nil {
 		return response, errorx.Wrap(err, "do request error")
 	}
+
 	// 打印调试信息
 	if r.debug {
 		logger := log.WithField("http_debug", true)
 		if trace := r.trace; trace != "" {
-			logger = logger.WithField("trace", trace)
+			logger = logger.WithField("Trace", trace)
 		}
 		logger.Printf("http_url: %s", r.url)
-		logger.Printf("http_body: %s", string(response.Body()))
+		logger.Printf("http_body: %s", string(response.Body))
 	}
+	// 关联trace
+	response.Trace = r.trace
 	return response, nil
-}
-
-func (r *Request) Execute(ctx context.Context) error {
-	_, err := r.Send()
-	return err
 }

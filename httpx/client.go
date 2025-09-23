@@ -13,16 +13,22 @@ var _client *Client // http客户端
 // GetClient 获取httpx客户端
 func GetClient() *Client {
 	if _client == nil {
-		_client = &Client{
-			mu:      sync.RWMutex{},
-			clients: make(map[string]*http.Client),
-		}
-		settings := DefaultSettings()
-		client := settings.NewClient()
-		_client.client = client
-		_client.clients[settings.Unique()] = client
+		_client = DefaultClient()
 	}
 	return _client
+}
+
+// DefaultClient 默认http客户端
+func DefaultClient() *Client {
+	settings := defaultSettings()
+	client := settings.NewClient()
+	return &Client{
+		mu:     sync.RWMutex{},
+		client: client,
+		clients: map[string]*http.Client{
+			settings.Unique(): client,
+		},
+	}
 }
 
 // Client httpx客户端
@@ -32,21 +38,19 @@ type Client struct {
 	clients map[string]*http.Client // 客户端缓存
 }
 
-// HttpClient 获取http客户端
-func (c *Client) HttpClient(options ...SettingsOption) *http.Client {
-	var client = new(http.Client)
+// GetHttpClient 获取http客户端
+func (c *Client) GetHttpClient(options ...SettingsOption) *http.Client {
 	if len(options) > 0 && options[0] != nil {
 		c.mu.Lock()
 		defer c.mu.Unlock()
-		settings := DefaultSettings()
-		for _, option := range options {
-			option(settings)
-		}
-		var ok bool
-		if client, ok = c.clients[settings.Unique()]; !ok {
+		settings := NewSettings(options...)
+		unique := settings.Unique()
+		if client, ok := c.clients[unique]; ok {
+			return client
+		} else {
 			client = settings.NewClient()
-			// 缓存客户端, 后续相同配置的请求直接从缓存中获取
-			c.clients[settings.Unique()] = client
+			c.clients[unique] = client
+			return client
 		}
 	}
 	return c.client
@@ -54,18 +58,19 @@ func (c *Client) HttpClient(options ...SettingsOption) *http.Client {
 
 // Do 执行http请求
 func (c *Client) Do(request *http.Request, option ...SettingsOption) (*Response, error) {
-	resp, err := c.HttpClient(option...).Do(request)
+	resp, err := c.GetHttpClient(option...).Do(request)
 	if err != nil {
 		return nil, errorx.Wrap(err, "http request error")
 	}
 	defer resp.Body.Close()
 
-	response := &Response{
-		status:  resp.StatusCode,
-		cookies: resp.Cookies(),
+	var body []byte
+	if body, err = io.ReadAll(resp.Body); err != nil {
+		return nil, errorx.Wrap(err, "http response Body read error")
 	}
-	if response.body, err = io.ReadAll(resp.Body); err != nil {
-		return response, errorx.Wrap(err, "http response body read error")
-	}
-	return response, nil
+	return &Response{
+		Status: resp.StatusCode,
+		Body:   body,
+		Header: resp.Header,
+	}, nil
 }

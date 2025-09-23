@@ -3,18 +3,13 @@ package filex
 import (
 	"bufio"
 	"bytes"
-	"crypto/tls"
 	"encoding/csv"
-	"encoding/hex"
 	"io"
-	"net/http"
-	"net/url"
 	"os"
 	"path/filepath"
 	"runtime"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/go-xuan/utilx/anyx"
 	"github.com/go-xuan/utilx/errorx"
@@ -402,48 +397,4 @@ func FileScanMatch(root string, match func(path string, info os.FileInfo) bool) 
 		return nil, errorx.Wrap(err, "file scan match error")
 	}
 	return files, nil
-}
-
-// GetFileBytesByUrl 通过url获取文件字节
-func GetFileBytesByUrl(fileUrl string) ([]byte, error) {
-	var tr = &http.Transport{
-		IdleConnTimeout:       time.Second * 2048,
-		ResponseHeaderTimeout: time.Second * 10,
-	}
-	if strings.Index(fileUrl, "https") != -1 {
-		tr.TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
-		requestURI, _ := url.ParseRequestURI(fileUrl)
-		fileUrl = requestURI.String()
-	}
-	var client = &http.Client{Transport: tr}
-	resp, err := client.Get(fileUrl)
-	if err != nil {
-		return nil, errorx.Wrap(err, "get http client error")
-	}
-	var body []byte
-	if body, err = io.ReadAll(resp.Body); err != nil {
-		return nil, errorx.Wrap(err, "response body read error")
-	}
-	if err = resp.Body.Close(); err != nil {
-		return nil, errorx.Wrap(err, "response body close error")
-	}
-	return body, nil
-}
-
-// 获取文件字节的二进制
-func bytesToHexString(src []byte) string {
-	if src == nil || len(src) == 0 {
-		return ""
-	}
-	sb := strings.Builder{}
-	temp := make([]byte, 0)
-	for _, v := range src {
-		sub := v & 0xFF
-		hv := hex.EncodeToString(append(temp, sub))
-		if len(hv) < 2 {
-			sb.WriteString(stringx.FormatInt64(0))
-		}
-		sb.WriteString(hv)
-	}
-	return sb.String()
 }

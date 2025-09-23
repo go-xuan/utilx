@@ -11,16 +11,29 @@ import (
 	"time"
 )
 
-// DefaultSettings 默认配置
-func DefaultSettings() *Settings {
-	return &Settings{Timeout: 10, Crt: "", Proxy: ""}
+// NewSettings 新建配置
+func NewSettings(options ...SettingsOption) *Settings {
+	settings := defaultSettings()
+	for _, option := range options {
+		option(settings)
+	}
+	return settings
+}
+
+// defaultSettings 默认配置
+func defaultSettings() *Settings {
+	return &Settings{
+		Timeout: 10,
+		Crt:     "",
+		Proxy:   "",
+	}
 }
 
 // Settings 客户端配置
 type Settings struct {
-	Timeout int
-	Crt     string
-	Proxy   string
+	Timeout int    `json:"timeout"` // 超时时间(秒)
+	Crt     string `json:"crt"`     // https证书路径
+	Proxy   string `json:"proxy"`   // 代理地址
 }
 
 func (s *Settings) Unique() string {

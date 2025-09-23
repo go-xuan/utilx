@@ -5,12 +5,14 @@ import (
 	"time"
 )
 
-func TestRetry(t *testing.T) {
-	if err := NewRetryTask(10, time.Second).
-		AddExecute(testTask{id: 1, ratio: 0.1}.Execute).
-		Execute(t.Context()); err != nil {
+func TestRetryScheduler(t *testing.T) {
+	retry := NewRetry(10, time.Second) // 重试策略
+	tt := testTask{id: 1, ratio: 0.1}  // 任务
+
+	// 执行
+	if err := NewRetryScheduler(tt, retry).Execute(t.Context()); err != nil {
 		t.Log(err)
 	} else {
-		t.Log("execute success")
+		t.Log("retry execute success")
 	}
 }

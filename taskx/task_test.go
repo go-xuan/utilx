@@ -15,8 +15,8 @@ type testTask struct {
 	ratio float64 // 成功率
 }
 
-func (t testTask) GetUnique() string {
-	return fmt.Sprintf("task_%d", t.id)
+func (t testTask) GetID() string {
+	return fmt.Sprintf("test:%d", t.id)
 }
 
 func (t testTask) Execute(ctx context.Context) error {
@@ -25,11 +25,18 @@ func (t testTask) Execute(ctx context.Context) error {
 	if value <= threshold {
 		return nil
 	}
-	return errorx.Errorf("error: unique=%d, value=%d，threshold=%d", t.id, value, threshold)
+	return errorx.Errorf("error: id=%d, value=%d，threshold=%d", t.id, value, threshold)
 }
 
 func TestTask(t *testing.T) {
-	if err := (testTask{5, 0.5}).Execute(t.Context()); err != nil {
+	// 测试任务
+	var task Task = &testTask{
+		id:    5,
+		ratio: 0.5,
+	}
+
+	// 执行任务
+	if err := task.Execute(t.Context()); err != nil {
 		t.Log(err)
 	}
 }

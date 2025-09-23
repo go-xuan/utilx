@@ -3,26 +3,26 @@ package taskx
 import (
 	"context"
 	"testing"
-	"time"
 )
 
 func TestConcurrent(t *testing.T) {
-	concurrencyTask := NewConcurrencyTask(10).AddResultHook(ErrorLogHook)
+	concurrency := NewConcurrency(5)
+	var tasks []Task
 	for i := 0; i < 20; i++ {
-		concurrencyTask.AddTask(testTask{id: i, ratio: 0.5})
+		tasks = append(tasks, testTask{id: i, ratio: 0.5})
 	}
-	if err := concurrencyTask.Execute(context.Background()); err != nil {
-		t.Log(err)
-	}
+	concurrency.Execute(t.Context(), tasks, PrintResult)
 }
 
-func TestConcurrentAndRetry(t *testing.T) {
-	concurrencyTask := NewConcurrencyTask(5).AddResultHook(NewRetry(3, time.Second).ResultHook)
+func TestConcurrentScheduler(t *testing.T) {
+	concurrency := NewConcurrency(5)
+	scheduler := NewConcurrencyScheduler("concurrency", concurrency)
 	for i := 0; i < 20; i++ {
-		concurrencyTask.AddTask(testTask{id: i, ratio: 0.5})
+		tt := testTask{id: i, ratio: 0.5}
+		scheduler.AddTask(tt)
 	}
-	if err := concurrencyTask.Execute(context.Background()); err != nil {
+	scheduler.AddResultHook(LogResult)
+	if err := scheduler.Execute(context.Background()); err != nil {
 		t.Log(err)
 	}
-	time.Sleep(20 * time.Second)
 }
