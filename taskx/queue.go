@@ -36,7 +36,7 @@ func (q *Queue) Execute(ctx context.Context) error {
 		return errorx.New("queue task execute error")
 	}
 	logger.Info("queue task execute success")
-	return q.execute(ctx)
+	return nil
 }
 
 // HasNext 是否有下一个任务

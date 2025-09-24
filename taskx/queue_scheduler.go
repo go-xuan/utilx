@@ -38,8 +38,8 @@ func (q *QueueScheduler) Execute(ctx context.Context) error {
 		WithField("task_type", "queue_scheduler")
 
 	// 检查队列是否为空
-	if q.head == nil {
-		logger.Info("queue is empty")
+	if q.head == nil || len(q.tasks) == 0 {
+		logger.Info("queue tasks is empty")
 		return nil
 	}
 
@@ -52,10 +52,10 @@ func (q *QueueScheduler) Execute(ctx context.Context) error {
 
 		// 执行当前任务
 		if err := current.Execute(ctx); err != nil {
-			logger.WithField("error", err.Error()).Error("queue scheduler execute error")
-			return errorx.Wrap(err, "queue scheduler execute error")
+			logger.WithField("error", err.Error()).Error("queue task schedule error")
+			return errorx.Wrap(err, "queue task schedule error")
 		}
-		logger.Info("queue scheduler execute success")
+		logger.Info("queue task schedule success")
 
 		// 从任务列表中删除当前任务并更新当前任务指针
 		delete(q.tasks, current.id)
