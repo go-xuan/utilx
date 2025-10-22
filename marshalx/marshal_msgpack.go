@@ -14,7 +14,7 @@ func Msgpack() Marshal {
 type msgpackImpl struct{}
 
 func (m msgpackImpl) Name() string {
-	return msgpackMethod
+	return MSGPACK
 }
 
 func (m msgpackImpl) Marshal(v interface{}) ([]byte, error) {

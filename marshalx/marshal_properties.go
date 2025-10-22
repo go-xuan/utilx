@@ -19,7 +19,7 @@ func Properties() Marshal {
 type propertiesImpl struct{}
 
 func (p propertiesImpl) Name() string {
-	return propertiesMethod
+	return PROPERTIES
 }
 
 func (p propertiesImpl) Marshal(v interface{}) ([]byte, error) {

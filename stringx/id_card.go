@@ -5,18 +5,6 @@ import (
 	"time"
 )
 
-var weight = [17]int{7, 9, 10, 5, 8, 4, 2, 1, 6, 3, 7, 9, 10, 5, 8, 4, 2}
-var idCardLastCodes = [11]byte{'1', '0', 'X', '9', '8', '7', '6', '5', '4', '3', '2'}
-var provinceCodes = []string{
-	"11", "12", "13", "14", "15",
-	"21", "22", "23",
-	"31", "32", "33", "34", "35", "36", "37",
-	"41", "42", "43", "44", "45", "46",
-	"50", "51", "52", "53", "54",
-	"61", "62", "63", "64", "65",
-	"71", "81", "91",
-}
-
 // GetIdCardLastCode 获生成身份证最后一位校验码
 // 十七位计算公式：idCardLastCodes[Sum(x*y)%11]
 // x:表示第i位置上的身份证号码数字值
@@ -27,10 +15,12 @@ func GetIdCardLastCode(idCard string) byte {
 		array[i], _ = strconv.Atoi(string(idCard[i]))
 	}
 	var sum int
+	var weight = [17]int{7, 9, 10, 5, 8, 4, 2, 1, 6, 3, 7, 9, 10, 5, 8, 4, 2}
 	for i := 0; i < 17; i++ {
 		sum += array[i] * weight[i]
 	}
-	return idCardLastCodes[sum%11]
+	var codes = [11]byte{'1', '0', 'X', '9', '8', '7', '6', '5', '4', '3', '2'}
+	return codes[sum%11]
 }
 
 // GetIdCardGender 根据身份证获取性别
@@ -100,11 +90,18 @@ func checkBirthday(idCard string) bool {
 
 // 校验省份
 func checkProvince(idCard string) bool {
-	provinceCode := make([]byte, 0)
-	provinceCode = append(provinceCode, idCard[:2]...)
-	provinceStr := string(provinceCode)
-	for i := range provinceCodes {
-		if provinceStr == provinceCodes[i] {
+	code := idCard[:2]
+	codes := []string{
+		"11", "12", "13", "14", "15",
+		"21", "22", "23",
+		"31", "32", "33", "34", "35", "36", "37",
+		"41", "42", "43", "44", "45", "46",
+		"50", "51", "52", "53", "54",
+		"61", "62", "63", "64", "65",
+		"71", "81", "91",
+	}
+	for _, c := range codes {
+		if code == c {
 			return true
 		}
 	}

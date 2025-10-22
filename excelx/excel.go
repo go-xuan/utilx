@@ -2,7 +2,6 @@ package excelx
 
 import (
 	"encoding/json"
-	"reflect"
 
 	"github.com/tealeg/xlsx"
 	"github.com/tidwall/gjson"
@@ -20,9 +19,9 @@ const (
 // GetHeaderMapping 通过反射获取excel表头映射，key:excel表头，value:结构体字段名
 func GetHeaderMapping(v any) map[string]string {
 	var result = make(map[string]string)
-	var typeRef = reflect.TypeOf(v)
-	for i := 0; i < typeRef.NumField(); i++ {
-		field := typeRef.Field(i)
+	var typeOf = anyx.TypeOf(v)
+	for i := 0; i < typeOf.NumField(); i++ {
+		field := typeOf.Field(i)
 		if header := field.Tag.Get("excel"); header != "" {
 			result[header] = field.Name
 		}

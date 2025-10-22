@@ -14,7 +14,7 @@ func GetLocalIP() string {
 	return ""
 }
 
-// GetWLANIP 获取当前机器的WLAN IP
+// GetWLANIP 获取当前机器的WLAN Host
 func GetWLANIP() string {
 	interfaces, err := net.Interfaces()
 	if err != nil {

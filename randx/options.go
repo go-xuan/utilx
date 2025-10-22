@@ -5,23 +5,30 @@ import (
 )
 
 const (
-	typeInt      = "int"      // 数字
-	typeFloat    = "float"    // 浮点数
-	typeSequence = "sequence" // 序列
-	typeTime     = "time"     // 时间
-	typeDate     = "date"     // 日期
-	typeUUID     = "uuid"     // uuid
-	typePhone    = "phone"    // 手机号
-	typeName     = "name"     // 姓名
-	typeIdCard   = "id_card"  // 身份证
-	typePlateNo  = "plate_no" // 车牌号
-	typeEmail    = "email"    // 邮箱
-	typeIP       = "ip"       // ip地址
-	typeProvince = "province" // 省
-	typeCity     = "city"     // 市
-	typePassword = "password" // 密码
-	typeEnum     = "enum"     // 枚举
+	INT      = "int"      // 数字
+	FLOAT    = "float"    // 浮点数
+	SEQUENCE = "sequence" // 序列
+	TIME     = "time"     // 时间
+	DATE     = "date"     // 日期
+	UUID     = "uuid"     // uuid
+	PHONE    = "phone"    // 手机号
+	NAME     = "name"     // 姓名
+	EMAIL    = "email"    // 邮箱
+	IP       = "ip"       // ip地址
+	PASSWORD = "password" // 密码
+	ENUM     = "enum"     // 枚举
 )
+
+// NewString 生成随机数
+func NewString(opt *Options) string {
+	var value string
+	if opt.Type == SEQUENCE {
+		value = strconv.Itoa(opt.Param.Sequence(opt.Offset))
+	} else {
+		value = opt.Param.String(opt.Type)
+	}
+	return opt.Param.Modify(value)
+}
 
 // Options 随机生成
 type Options struct {
@@ -32,12 +39,12 @@ type Options struct {
 }
 
 // NewString 生成随机数
-func (opt *Options) NewString() string {
+func (o *Options) NewString() string {
 	var value string
-	if opt.Type == typeSequence {
-		value = strconv.Itoa(opt.Param.Sequence(opt.Offset))
+	if o.Type == SEQUENCE {
+		value = strconv.Itoa(o.Param.Sequence(o.Offset))
 	} else {
-		value = opt.Param.String(opt.Type)
+		value = o.Param.String(o.Type)
 	}
-	return opt.Param.Modify(value)
+	return o.Param.Modify(value)
 }

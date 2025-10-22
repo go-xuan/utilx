@@ -7,12 +7,12 @@ import (
 )
 
 const (
-	jsonMethod       = "json"
-	yamlMethod       = "yml"
-	ymlMethod        = "yaml"
-	tomlMethod       = "toml"
-	propertiesMethod = "properties"
-	msgpackMethod    = "msgpack"
+	JSON       = "json"
+	YML        = "yml"
+	YAML       = "yaml"
+	TOML       = "toml"
+	PROPERTIES = "properties"
+	MSGPACK    = "msgpack"
 )
 
 // Marshal 序列化
@@ -30,15 +30,15 @@ func Apply(name string) Marshal {
 		name = filex.GetSuffix(name)
 	}
 	switch name {
-	case ymlMethod, yamlMethod:
+	case YML, YAML:
 		return Yaml()
-	case tomlMethod:
+	case TOML:
 		return Toml()
-	case propertiesMethod:
+	case PROPERTIES:
 		return Properties()
-	case msgpackMethod:
+	case MSGPACK:
 		return Msgpack()
-	case jsonMethod:
+	case JSON:
 		return Json("    ")
 	default:
 		return Json()

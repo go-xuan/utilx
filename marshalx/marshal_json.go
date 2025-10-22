@@ -21,7 +21,7 @@ type jsonImpl struct {
 }
 
 func (j jsonImpl) Name() string {
-	return jsonMethod
+	return JSON
 }
 
 func (j jsonImpl) Marshal(v interface{}) ([]byte, error) {

@@ -14,6 +14,12 @@ import (
 	"github.com/go-xuan/utilx/errorx"
 )
 
+const (
+	ContentType     = "Content-Type"
+	ApplicationJSON = "application/json"
+	ApplicationForm = "application/x-www-form-urlencoded"
+)
+
 // NewRequest 新建请求
 func NewRequest(method string, url_ string) *Request {
 	return &Request{
@@ -23,6 +29,7 @@ func NewRequest(method string, url_ string) *Request {
 		cookies: make([]*http.Cookie, 0),
 		form:    make(url.Values),
 		files:   make([]*File, 0),
+		presets: make([]RequestPreset, 0),
 	}
 }
 
@@ -45,6 +52,7 @@ type Request struct {
 	form    url.Values        // 请求表单参数
 	files   []*File           // 请求文件
 	body    any               // 请求体
+	presets []RequestPreset   // 请求预设
 }
 
 // Params 添加查询参数
@@ -69,21 +77,31 @@ func (r *Request) Params(params map[string]string) *Request {
 	return r
 }
 
+// AddBody 添加请求体
 func (r *Request) AddBody(body any) *Request {
 	r.body = body
 	return r
 }
 
+// AddForm 添加请求表单参数
 func (r *Request) AddForm(form url.Values) *Request {
-	r.form = form
+	if len(form) > 0 {
+		for key, vals := range form {
+			for _, val := range vals {
+				r.form.Add(key, val)
+			}
+		}
+	}
 	return r
 }
 
+// AddFile 添加请求文件
 func (r *Request) AddFile(file *File) *Request {
 	r.files = append(r.files, file)
 	return r
 }
 
+// AddHeaders 添加请求头
 func (r *Request) AddHeaders(headers map[string]string) *Request {
 	for k, v := range headers {
 		r.headers[k] = v
@@ -91,33 +109,65 @@ func (r *Request) AddHeaders(headers map[string]string) *Request {
 	return r
 }
 
+// AddHeader 添加请求头
 func (r *Request) AddHeader(key, value string) *Request {
 	r.headers[key] = value
 	return r
 }
 
+// AddPreset 添加请求预设
+func (r *Request) AddPreset(presets ...RequestPreset) *Request {
+	r.presets = append(r.presets, presets...)
+	return r
+}
+
+// Debug 开启调试模式
 func (r *Request) Debug() *Request {
 	r.debug = true
 	return r
 }
 
+// Trace 添加跟踪ID
 func (r *Request) Trace(trace string) *Request {
 	r.trace = trace
 	return r
 }
 
+// NewHttpRequest 创建http请求
 func (r *Request) NewHttpRequest() (*http.Request, error) {
-	var body io.Reader
+	body, err := r.getBodyReader()
+	if err != nil {
+		return nil, errorx.Wrap(err, "get body reader error")
+	}
+
+	// 创建请求
+	var request *http.Request
+	if request, err = http.NewRequest(r.method, r.url, body); err != nil {
+		return nil, errorx.Wrap(err, "new request error")
+	}
+
+	// 添加请求预设
+	r.setRequestPreset(request)
+	// 添加请求头
+	r.setRequestHeaders(request)
+	// 添加cookie
+	r.setRequestCookie(request)
+
+	return request, nil
+}
+
+// getBodyReader 获取请求体读取器
+func (r *Request) getBodyReader() (io.Reader, error) {
 	if r.body != nil {
-		r.headers["Content-Type"] = "application/json"
+		r.AddHeader(ContentType, ApplicationJSON)
 		marshal, err := json.Marshal(r.body)
 		if err != nil {
-			return nil, errorx.Wrap(err, "marshal Body error")
+			return nil, errorx.Wrap(err, "marshal body error")
 		}
-		body = bytes.NewReader(marshal)
+		return bytes.NewReader(marshal), nil
 	} else if len(r.form) > 0 {
-		r.headers["Content-Type"] = "application/x-www-form-urlencoded"
-		body = strings.NewReader(r.form.Encode())
+		r.AddHeader(ContentType, ApplicationForm)
+		return strings.NewReader(r.form.Encode()), nil
 	} else if len(r.files) > 0 {
 		buffer := &bytes.Buffer{}
 		writer := multipart.NewWriter(buffer)
@@ -137,30 +187,38 @@ func (r *Request) NewHttpRequest() (*http.Request, error) {
 			}
 		}
 
-		r.headers["Content-Type"] = writer.FormDataContentType()
+		r.AddHeader(ContentType, writer.FormDataContentType())
 		if err := writer.Close(); err != nil {
 			return nil, errorx.Wrap(err, "close multipart writer error")
 		}
-		body = buffer
+		return buffer, nil
 	}
-	// 创建请求
-	request, err := http.NewRequest(r.method, r.url, body)
-	if err != nil {
-		return nil, errorx.Wrap(err, "new request error")
+	return nil, nil
+}
+
+// 设置请求预设
+func (r *Request) setRequestPreset(request *http.Request) {
+	for _, preset := range r.presets {
+		preset.Preset(request)
 	}
-	// 设置请求头
+}
+
+// 设置请求头
+func (r *Request) setRequestHeaders(request *http.Request) {
 	if r.headers != nil && len(r.headers) > 0 {
 		for key, val := range r.headers {
 			request.Header.Set(key, val)
 		}
 	}
-	// 添加cookie
+}
+
+// 设置cookie
+func (r *Request) setRequestCookie(request *http.Request) {
 	if len(r.cookies) > 0 {
 		for _, cookie := range r.cookies {
 			request.AddCookie(cookie)
 		}
 	}
-	return request, nil
 }
 
 // Send 发送请求

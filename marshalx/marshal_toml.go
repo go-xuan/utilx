@@ -16,7 +16,7 @@ func Toml() Marshal {
 type tomlImpl struct{}
 
 func (t tomlImpl) Name() string {
-	return tomlMethod
+	return TOML
 }
 
 func (t tomlImpl) Marshal(v interface{}) ([]byte, error) {

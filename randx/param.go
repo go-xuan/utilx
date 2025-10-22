@@ -5,9 +5,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/go-xuan/utilx/anyx"
 	"github.com/go-xuan/utilx/stringx"
 	"github.com/go-xuan/utilx/timex"
+	"github.com/google/uuid"
 )
 
 func NewParam(data map[string]string) *Param {
@@ -48,36 +48,28 @@ type Param struct {
 // 字符串
 func (p *Param) String(t string) string {
 	switch t {
-	case typeInt:
+	case INT:
 		return strconv.Itoa(p.Int())
-	case typeFloat:
+	case FLOAT:
 		return strconv.FormatFloat(p.Float(), 'f', -1, 64)
-	case typeTime:
+	case TIME:
 		return p.TimeFmt()
-	case typeDate:
+	case DATE:
 		return p.TimeFmt(timex.DateFmt)
-	case typeUUID:
-		return UUID()
-	case typePhone:
+	case UUID:
+		return uuid.NewString()
+	case PHONE:
 		return Phone()
-	case typeName:
+	case NAME:
 		return Name()
-	case typeIdCard:
-		return IdCard()
-	case typePlateNo:
-		return PlateNo()
-	case typeEmail:
+	case EMAIL:
 		return Email()
-	case typeIP:
-		return IP()
-	case typeProvince:
-		return Province()
-	case typeCity:
-		return City()
-	case typePassword:
+	case IP:
+		return Ip()
+	case PASSWORD:
 		return p.Password()
-	case typeEnum:
-		return StringFrom(p.Enums...)
+	case ENUM:
+		return SelectString(p.Enums)
 	default:
 		return String(p.Length)
 	}
@@ -85,17 +77,20 @@ func (p *Param) String(t string) string {
 
 // Int 整数
 func (p *Param) Int() int {
-	min := stringx.ParseInt(p.Min, 1)
-	max := stringx.ParseInt(p.Max, 999)
-	return IntRange(min, max)
+	min_ := stringx.ParseInt(p.Min, 1)
+	max_ := stringx.ParseInt(p.Max, 999)
+	return IntRange(min_, max_)
 }
 
 // Float 浮点数
 func (p *Param) Float() float64 {
-	min := stringx.ParseFloat(p.Min, 1)
-	max := stringx.ParseFloat(p.Max, 999)
-	prec := anyx.IfZero(p.Prec, 6)
-	return Float64Range(min, max, prec)
+	min_ := stringx.ParseFloat(p.Min, 1)
+	max_ := stringx.ParseFloat(p.Max, 999)
+	prec := p.Prec
+	if prec == 0 {
+		prec = 6
+	}
+	return Float64Range(min_, max_, prec)
 }
 
 // Time 时间
@@ -120,7 +115,7 @@ func (p *Param) TimeFmt(format ...string) string {
 
 // Enum 枚举值
 func (p *Param) Enum() string {
-	return StringFrom(p.Enums...)
+	return SelectString(p.Enums)
 }
 
 // Sequence 序列值
@@ -132,11 +127,11 @@ func (p *Param) Sequence(offset int) int {
 func (p *Param) Password() string {
 	switch p.Level {
 	case 2:
-		return StringUse(UseNumber|UseLowerLetter|UseUpperLetter, p.Length)
+		return StringWithOption(p.Length, WithNumber|WithLowerLetter|WithUpperLetter)
 	case 3:
-		return StringUse(UseNumber|UseLowerLetter|UseUpperLetter|UseSpecialSymbols, p.Length)
+		return StringWithOption(p.Length, WithNumber|WithLowerLetter|WithUpperLetter|WithSpecialSymbol)
 	default:
-		return StringUse(UseNumber, p.Length)
+		return StringWithOption(p.Length, WithNumber)
 	}
 }
 

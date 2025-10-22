@@ -14,7 +14,7 @@ func Yaml() Marshal {
 type yamlImpl struct{}
 
 func (y yamlImpl) Name() string {
-	return yamlMethod
+	return YAML
 }
 
 func (y yamlImpl) Marshal(v interface{}) ([]byte, error) {

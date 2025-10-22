@@ -71,8 +71,7 @@ func (q *QueueScheduler) Add(id string, execute Execute) {
 
 // AddTail 尾插（当前新增任务添加到队列末尾）
 func (q *QueueScheduler) AddTail(id string, execute Execute) {
-	logger := log.WithField("add_task_id", id).
-		WithField("add_position", "queue_tail")
+	logger := log.WithField("task_id", id).WithField("position", "queue_tail")
 	if id == "" || execute == nil {
 		logger.Error("tasks id is empty or tasks execute is nil")
 		return
@@ -103,8 +102,8 @@ func (q *QueueScheduler) AddTail(id string, execute Execute) {
 
 // AddHead 头插（当前新增任务添加到队列首位）
 func (q *QueueScheduler) AddHead(id string, execute Execute) {
-	logger := log.WithField("add_task_id", id).
-		WithField("add_position", "queue_head")
+	logger := log.WithField("task_id", id).
+		WithField("position", "queue_head")
 	if id == "" || execute == nil {
 		logger.Error("tasks id is empty or tasks execute is nil")
 		return
@@ -134,9 +133,9 @@ func (q *QueueScheduler) AddHead(id string, execute Execute) {
 
 // AddAfter 后插队(将新任务添加到目标任务之后)
 func (q *QueueScheduler) AddAfter(baseId, id string, execute Execute) {
-	logger := log.WithField("add_task_id", id).
-		WithField("base_task_id", baseId).
-		WithField("add_position", "after")
+	logger := log.WithField("task_id", id).
+		WithField("position", "after").
+		WithField("after", baseId)
 	if id == "" || execute == nil {
 		logger.Error("tasks id is empty or tasks execute is nil")
 		return
@@ -173,9 +172,9 @@ func (q *QueueScheduler) AddAfter(baseId, id string, execute Execute) {
 
 // AddBefore 前插队(将新任务添加到目标任务之后)
 func (q *QueueScheduler) AddBefore(baseId, id string, execute Execute) {
-	logger := log.WithField("add_task_id", id).
-		WithField("base_task_id", baseId).
-		WithField("add_position", "before")
+	logger := log.WithField("task_id", id).
+		WithField("position", "before").
+		WithField("before", baseId)
 	if id == "" || execute == nil {
 		logger.Error("tasks id is empty or tasks execute is nil")
 		return
@@ -212,7 +211,7 @@ func (q *QueueScheduler) AddBefore(baseId, id string, execute Execute) {
 // Remove 移除任务
 func (q *QueueScheduler) Remove(id string) {
 	if id != "" {
-		logger := log.WithField("remove_task_id", id)
+		logger := log.WithField("task_id", id)
 		if task, ok := q.tasks[id]; ok {
 			q.mutex.Lock()
 			defer q.mutex.Unlock()

@@ -64,9 +64,9 @@ func Distinct[T comparable](slices ...[]T) []T {
 	return nil
 }
 
-// RetainAll 取交集
-func RetainAll[T comparable](slices ...[]T) []T {
-	if len(slices) > 0 {
+// Intersect 取交集
+func Intersect[T comparable](slices ...[]T) []T {
+	if l := len(slices); l > 0 {
 		var m = make(map[T]int)
 		for _, slice := range slices {
 			for _, k := range slice {
@@ -74,8 +74,8 @@ func RetainAll[T comparable](slices ...[]T) []T {
 			}
 		}
 		var result []T
-		for k, v := range m {
-			if v > 1 {
+		for k, count := range m {
+			if count == l {
 				result = append(result, k)
 			}
 		}
@@ -87,14 +87,14 @@ func RetainAll[T comparable](slices ...[]T) []T {
 // Exclude 移除
 func Exclude[T comparable](target []T, exclude []T) []T {
 	if len(target) > 0 && len(exclude) > 0 {
-		m := make(map[T]struct{})
-		for _, item := range exclude {
-			m[item] = struct{}{}
+		var m = make(map[T]struct{})
+		for _, k := range exclude {
+			m[k] = struct{}{}
 		}
 		var result []T
-		for _, item := range target {
-			if _, ok := m[item]; !ok {
-				result = append(result, item)
+		for _, k := range target {
+			if _, ok := m[k]; !ok {
+				result = append(result, k)
 			}
 		}
 		return result

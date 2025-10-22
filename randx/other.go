@@ -12,12 +12,7 @@ func Bool() bool {
 
 // Split 分割后随机取值
 func Split(str, sep string) string {
-	return StringFrom(strings.Split(str, sep)...)
-}
-
-// SelectByte 选择字节
-func SelectByte(str string) byte {
-	return str[IntRange(0, len(str)-1)]
+	return SelectString(strings.Split(str, sep))
 }
 
 // Enum 枚举
@@ -43,16 +38,14 @@ func Date() string {
 
 // TimeRange 随机时间
 func TimeRange(min, max time.Time) time.Time {
-	if max.After(min) {
-		return time.Unix(0, Int64Range(min.UnixNano(), max.UnixNano()))
+	if maxNano, minNano := max.UnixNano(), min.UnixNano(); maxNano > minNano {
+		return time.Unix(0, Int64Range(minNano, maxNano))
+	} else {
+		return time.Unix(0, Int64Range(maxNano, minNano))
 	}
-	return min
 }
 
 // DateRange 随机时间
 func DateRange(min, max time.Time) string {
-	if max.After(min) {
-		return time.Unix(0, Int64Range(min.UnixNano(), max.UnixNano())).Format("2006-01-02")
-	}
-	return min.Format("2006-01-02")
+	return TimeRange(min, max).Format("2006-01-02")
 }
