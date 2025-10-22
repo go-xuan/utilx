@@ -16,7 +16,7 @@ type testTask struct {
 }
 
 func (t testTask) GetID() string {
-	return fmt.Sprintf("test:%d", t.id)
+	return fmt.Sprintf("test—%d", t.id)
 }
 
 func (t testTask) Execute(ctx context.Context) error {

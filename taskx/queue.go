@@ -14,25 +14,25 @@ func NewQueue(name string) *Queue {
 	return &Queue{
 		name:  name,
 		mutex: new(sync.Mutex),
-		tasks: make(map[string]*queueItem),
+		tasks: make(map[string]*queueTask),
 	}
 }
 
-// queueItem 队列任务
-type queueItem struct {
+// queueTask 队列任务
+type queueTask struct {
 	name    string     // 任务ID
 	execute Execute    // 任务执行函数
-	prev    *queueItem // 指向上一个任务
-	next    *queueItem // 指向下一个任务
+	prev    *queueTask // 指向上一个任务
+	next    *queueTask // 指向下一个任务
 }
 
 // Queue 队列任务处理调度器
 type Queue struct {
 	name  string                // 队列任务处理调度器ID
 	mutex *sync.Mutex           // 锁
-	head  *queueItem            // 头部任务
-	tail  *queueItem            // 尾部任务
-	tasks map[string]*queueItem // 任务列表
+	head  *queueTask            // 头部任务
+	tail  *queueTask            // 尾部任务
+	tasks map[string]*queueTask // 任务列表
 }
 
 func (q *Queue) GetID() string {
@@ -45,7 +45,7 @@ func (q *Queue) Execute(ctx context.Context) error {
 	logger := log.WithField("queue", q.GetID())
 	// 检查队列是否为空
 	if q.head == nil || len(q.tasks) == 0 {
-		logger.Info("queueItem tasks is empty")
+		logger.Info("queue tasks is empty")
 		return nil
 	}
 
@@ -58,10 +58,10 @@ func (q *Queue) Execute(ctx context.Context) error {
 		}
 
 		if err := current.execute(ctx); err != nil {
-			logger.WithField("error", err.Error()).Error("queueItem task execute error")
-			return errorx.Wrap(err, "queueItem task execute error")
+			logger.WithField("error", err.Error()).Error("queue task execute error")
+			return errorx.Wrap(err, "queue task execute error")
 		}
-		logger.Info("queueItem task execute success")
+		logger.Info("queue task execute success")
 		// 从任务列表中删除当前任务并更新当前任务指针
 		delete(q.tasks, current.name)
 		current = current.next
@@ -78,7 +78,7 @@ func (q *Queue) Add(name string, execute Execute) {
 func (q *Queue) AddTail(name string, execute Execute) {
 	logger := log.WithField("name", name).
 		WithField("queue", q.GetID()).
-		WithField("position", "tail of queueItem")
+		WithField("position", "tail of queueTask")
 
 	if name == "" || execute == nil {
 		logger.Error("tasks name is empty or tasks execute is nil")
@@ -88,11 +88,11 @@ func (q *Queue) AddTail(name string, execute Execute) {
 	defer q.mutex.Unlock()
 
 	if q.cover(name, execute) {
-		logger.Error("queueItem add tail failed: tasks already exists")
+		logger.Error("queue add tail failed, tasks already exists")
 		return
 	}
 
-	newTask := &queueItem{name: name, execute: execute}
+	newTask := &queueTask{name: name, execute: execute}
 	if q.tail != nil {
 		// 队列不为空，将新任务添加到尾部
 		newTask.prev = q.tail
@@ -105,14 +105,14 @@ func (q *Queue) AddTail(name string, execute Execute) {
 	}
 
 	q.tasks[name] = newTask
-	logger.Info("queueItem add tail success")
+	logger.Info("queue add tail success")
 }
 
 // AddHead 头插（当前新增任务添加到队列首位）
 func (q *Queue) AddHead(name string, execute Execute) {
 	logger := log.WithField("name", name).
 		WithField("queue", q.GetID()).
-		WithField("position", "head of queueItem")
+		WithField("position", "head of queueTask")
 
 	if name == "" || execute == nil {
 		logger.Error("tasks name is empty or tasks execute is nil")
@@ -122,11 +122,11 @@ func (q *Queue) AddHead(name string, execute Execute) {
 	defer q.mutex.Unlock()
 
 	if q.cover(name, execute) {
-		logger.Error("queueItem add head failed: tasks already exists")
+		logger.Error("queue add head failed: tasks already exists")
 		return
 	}
 
-	newTask := &queueItem{name: name, execute: execute}
+	newTask := &queueTask{name: name, execute: execute}
 	if q.head != nil {
 		// 队列已有任务，将新任务插入到头部
 		q.head.prev = newTask
@@ -138,7 +138,7 @@ func (q *Queue) AddHead(name string, execute Execute) {
 		q.tail = newTask
 	}
 	q.tasks[name] = newTask
-	logger.Info("queueItem add head success")
+	logger.Info("queue add head success")
 }
 
 // AddAfter 后插队(将新任务添加到目标任务之后)
@@ -155,17 +155,17 @@ func (q *Queue) AddAfter(baseName, name string, execute Execute) {
 	defer q.mutex.Unlock()
 
 	if q.cover(name, execute) {
-		logger.Error("queueItem add after failed: tasks already exists")
+		logger.Error("queue add after failed: tasks already exists")
 		return
 	}
 
 	baseTask, ok := q.tasks[baseName]
 	if !ok {
-		logger.Error("queueItem add after failed: base tasks not exist")
+		logger.Error("queue add after failed: base tasks not exist")
 		return
 	}
 
-	newTask := &queueItem{name: name, execute: execute}
+	newTask := &queueTask{name: name, execute: execute}
 	if baseTask.next != nil { // 目标任务存在且不是队尾，则插入到目标任务之后
 		newTask.next = baseTask.next
 		newTask.prev = baseTask
@@ -177,7 +177,7 @@ func (q *Queue) AddAfter(baseName, name string, execute Execute) {
 		q.tail = newTask
 	}
 	q.tasks[name] = newTask
-	logger.Info("queueItem add after success")
+	logger.Info("queue add after success")
 }
 
 // AddBefore 前插队(将新任务添加到目标任务之后)
@@ -193,17 +193,17 @@ func (q *Queue) AddBefore(baseName, name string, execute Execute) {
 	defer q.mutex.Unlock()
 
 	if q.cover(name, execute) {
-		logger.Error("queueItem add before failed: tasks already exists")
+		logger.Error("queue add before failed: tasks already exists")
 		return
 	}
 
 	baseTask, ok := q.tasks[baseName]
 	if !ok {
-		logger.Error("queueItem add before failed: base tasks not exist")
+		logger.Error("queue add before failed: base tasks not exist")
 		return
 	}
 
-	newTask := &queueItem{name: name, execute: execute}
+	newTask := &queueTask{name: name, execute: execute}
 	if baseTask.prev != nil { // 目标任务不是队列头部，插入到目标任务之前
 		newTask.prev = baseTask.prev
 		newTask.next = baseTask
@@ -215,7 +215,7 @@ func (q *Queue) AddBefore(baseName, name string, execute Execute) {
 		q.head = newTask
 	}
 	q.tasks[name] = newTask
-	logger.Info("queueItem add before success")
+	logger.Info("queue add before success")
 }
 
 // Remove 移除任务
@@ -247,9 +247,9 @@ func (q *Queue) Remove(name string) {
 				task.next.prev = task.prev
 			}
 			delete(q.tasks, name)
-			logger.Info("queueItem remove success")
+			logger.Info("queue remove success")
 		} else {
-			logger.Error("queueItem remove failed: execute name does not exist")
+			logger.Error("queue remove failed: execute name does not exist")
 		}
 	}
 }
@@ -274,7 +274,7 @@ func (q *Queue) Reset() {
 	defer q.mutex.Unlock()
 	q.head = nil
 	q.tail = nil
-	q.tasks = make(map[string]*queueItem)
+	q.tasks = make(map[string]*queueTask)
 }
 
 // Exist 任务是否存在
