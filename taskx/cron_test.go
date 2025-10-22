@@ -8,12 +8,12 @@ import (
 
 func TestCronScheduler(t *testing.T) {
 	// 初始化
-	scheduler := NewCronScheduler("cron_scheduler")
+	scheduler := NewCronScheduler("cron_scheduler_test")
 
-	_ = scheduler.AddCronTask(NewCron("1", "@every 5s", testTask{id: 1, ratio: 0.5}.Execute))
-	_ = scheduler.AddCronTask(NewCron("2", "@every 2s", testTask{id: 2, ratio: 0.5}.Execute))
-	_ = scheduler.AddCronTask(NewCron("3", "@daily", testTask{id: 3, ratio: 0.5}.Execute))
-	_ = scheduler.AddCronTask(NewCron("4", "@0 */1 * * * ?s", testTask{id: 4, ratio: 0.5}.Execute))
+	_ = scheduler.AddCronTask(NewCronTask("1", "@every 5s", testTask{id: 1, ratio: 0.5}.Execute))
+	_ = scheduler.AddCronTask(NewCronTask("2", "@every 2s", testTask{id: 2, ratio: 0.5}.Execute))
+	_ = scheduler.AddCronTask(NewCronTask("3", "@daily", testTask{id: 3, ratio: 0.5}.Execute))
+	_ = scheduler.AddCronTask(NewCronTask("4", "@0 */1 * * * ?s", testTask{id: 4, ratio: 0.5}.Execute))
 
 	// 开始调度
 	if err := scheduler.Execute(t.Context()); err != nil {
