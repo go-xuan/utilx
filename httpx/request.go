@@ -23,13 +23,13 @@ const (
 // NewRequest 新建请求
 func NewRequest(method string, url_ string) *Request {
 	return &Request{
-		method:  method,
-		url:     url_,
-		headers: make(map[string]string),
-		cookies: make([]*http.Cookie, 0),
-		form:    make(url.Values),
-		files:   make([]*File, 0),
-		presets: make([]RequestPreset, 0),
+		method:     method,
+		url:        url_,
+		headers:    make(map[string]string),
+		cookies:    make([]*http.Cookie, 0),
+		form:       make(url.Values),
+		files:      make([]*File, 0),
+		decorators: make([]Decorator, 0),
 	}
 }
 
@@ -43,16 +43,16 @@ type File struct {
 
 // Request 请求器
 type Request struct {
-	method  string            // 请求方法
-	url     string            // 请求URL
-	trace   string            // 跟踪ID
-	debug   bool              // 是否开启调试模式
-	headers map[string]string // 请求头
-	cookies []*http.Cookie    // 请求cookie
-	form    url.Values        // 请求表单参数
-	files   []*File           // 请求文件
-	body    any               // 请求体
-	presets []RequestPreset   // 请求预设
+	method     string            // 请求方法
+	url        string            // 请求URL
+	trace      string            // 跟踪ID
+	debug      bool              // 是否开启调试模式
+	headers    map[string]string // 请求头
+	cookies    []*http.Cookie    // 请求cookie
+	form       url.Values        // 请求表单参数
+	files      []*File           // 请求文件
+	body       any               // 请求体
+	decorators []Decorator       // 请求装饰器
 }
 
 // Params 添加查询参数
@@ -115,9 +115,9 @@ func (r *Request) AddHeader(key, value string) *Request {
 	return r
 }
 
-// AddPreset 添加请求预设
-func (r *Request) AddPreset(presets ...RequestPreset) *Request {
-	r.presets = append(r.presets, presets...)
+// AddDecorator 添加请求装饰器
+func (r *Request) AddDecorator(decorators ...Decorator) *Request {
+	r.decorators = append(r.decorators, decorators...)
 	return r
 }
 
@@ -147,7 +147,7 @@ func (r *Request) NewHttpRequest() (*http.Request, error) {
 	}
 
 	// 添加请求预设
-	r.setRequestPreset(request)
+	r.decorate(request)
 	// 添加请求头
 	r.setRequestHeaders(request)
 	// 添加cookie
@@ -196,10 +196,10 @@ func (r *Request) getBodyReader() (io.Reader, error) {
 	return nil, nil
 }
 
-// 设置请求预设
-func (r *Request) setRequestPreset(request *http.Request) {
-	for _, preset := range r.presets {
-		preset.Preset(request)
+// 请求装饰
+func (r *Request) decorate(request *http.Request) {
+	for _, decorator := range r.decorators {
+		decorator.Decorate(request)
 	}
 }
 
@@ -222,17 +222,17 @@ func (r *Request) setRequestCookie(request *http.Request) {
 }
 
 // Send 发送请求
-func (r *Request) Send(options ...SettingsOption) (*Response, error) {
+func (r *Request) Send(client ...*http.Client) (*Response, error) {
 	request, err := r.NewHttpRequest()
 	if err != nil {
-		return nil, errorx.Wrap(err, "new request error")
+		return nil, errorx.Wrap(err, "new http request error")
 	}
 	// 发送请求
 	var response *Response
-	if response, err = GetClient().Do(request, options...); err != nil {
-		return response, errorx.Wrap(err, "do request error")
+	if response, err = SendHttpRequest(request, client...); err != nil {
+		return response, errorx.Wrap(err, "send http request error")
 	}
-
+	response.AddTrace(r.trace)
 	// 打印调试信息
 	if r.debug {
 		logger := log.WithField("http_debug", true)
@@ -240,9 +240,8 @@ func (r *Request) Send(options ...SettingsOption) (*Response, error) {
 			logger = logger.WithField("Trace", trace)
 		}
 		logger.Printf("http_url: %s", r.url)
-		logger.Printf("http_body: %s", string(response.Body))
+		logger.Printf("http_body: %s", string(response.body))
 	}
 	// 关联trace
-	response.Trace = r.trace
 	return response, nil
 }

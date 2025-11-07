@@ -18,5 +18,5 @@ func TimeUnix() int64 {
 
 // Timestamp 生成时间戳
 func Timestamp() string {
-	return time.Now().UTC().Format("20060102150405")
+	return time.Now().Format("20060102150405")
 }

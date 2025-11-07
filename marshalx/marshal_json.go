@@ -45,7 +45,7 @@ func (j jsonImpl) Read(path string, v interface{}) error {
 
 // Write 写入json文件
 func (j jsonImpl) Write(path string, v interface{}) error {
-	if data, err := json.Marshal(v); err != nil {
+	if data, err := j.Marshal(v); err != nil {
 		return errorx.Wrap(err, "json marshal error")
 	} else if err = filex.WriteFile(path, data); err != nil {
 		return errorx.Wrap(err, "write file error")

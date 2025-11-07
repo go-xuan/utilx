@@ -12,7 +12,7 @@ const (
 	lowerLetters = "abcdefghijklmnopqrstuvwxyz"
 	upperLetters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 	numbers      = "1234567890"
-	special      = "!@#$%&*+-=?"
+	special      = "~!@#$%^&*()-+_=:;,|./?"
 	lowerChar    = "abcdefghijklmnopqrstuvwxyz1234567890"
 	allChar      = "abcdefghijklmnopqrstuvwxyz1234567890ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 )

@@ -136,17 +136,19 @@ func WriteCSV(path string, data [][]string) error {
 	return nil
 }
 
-func Open(filePath string, flag ...int) (*os.File, error) {
-	CreateIfNotExist(filePath)
-	file, err := os.OpenFile(filePath, anyx.Default(Overwrite, flag...), 0644)
+// Open 打开文件
+func Open(path string, flag ...int) (*os.File, error) {
+	CreateIfNotExist(path)
+	file, err := os.OpenFile(path, anyx.Default(Overwrite, flag...), 0644)
 	if err != nil {
 		return nil, errorx.Wrap(err, "open file error")
 	}
 	return file, nil
 }
 
-func Clear(filePath string) {
-	file, _ := os.OpenFile(filePath, os.O_TRUNC, 0644)
+// Clear 清空文件内容
+func Clear(path string) {
+	file, _ := os.OpenFile(path, os.O_TRUNC, 0644)
 	_ = file.Close()
 }
 
@@ -163,12 +165,12 @@ func MustOpen(dir string, name string) (*os.File, error) {
 }
 
 // FileSplit 文件拆分
-func FileSplit(filePath string, size int) ([]string, error) {
-	file, err := os.OpenFile(filePath, os.O_RDONLY, 0666)
+func FileSplit(path string, size int) ([]string, error) {
+	file, err := os.OpenFile(path, os.O_RDONLY, 0666)
 	if err != nil {
 		return nil, errorx.Wrap(err, "open file error")
 	}
-	dir, filename, suffix := Analyse(filePath)
+	dir, filename, suffix := Analyse(path)
 	dir = filepath.Join(dir, filename)
 	reader := bufio.NewReader(file)
 	count, index := 1, 1
@@ -263,12 +265,44 @@ func Create(path string) error {
 	return nil
 }
 
+// Copy 复制文件
+func Copy(src, dst string) error {
+	// 打开源文件
+	srcFile, err := os.Open(src)
+	if err != nil {
+		return errorx.Wrap(err, "open source file error")
+	}
+	defer srcFile.Close()
+	// 创建目标文件
+	var dstFile *os.File
+	if dstFile, err = os.Create(dst); err != nil {
+		return errorx.Wrap(err, "create destination file error")
+	}
+	defer dstFile.Close()
+	// 复制文件内容
+	if _, err = io.Copy(dstFile, srcFile); err != nil {
+		return errorx.Wrap(err, "copy file error")
+	}
+
+	return nil
+}
+
 // CreateIfNotExist 创建文件
 func CreateIfNotExist(path string) {
 	if !Exists(path) {
-		CreateDir(path)
-		_ = Create(path)
+		CreateFile(path)
 	}
+}
+
+// CreateFile 创建文件，但是不打开
+func CreateFile(path string) {
+	if dir, _ := filepath.Split(path); !Exists(dir) {
+		// 先创建文件夹
+		_ = os.MkdirAll(dir, os.ModePerm)
+		// 再修改权限
+		_ = os.Chmod(dir, os.ModePerm)
+	}
+	_ = Create(path)
 }
 
 // CreateDir 创建文件夹

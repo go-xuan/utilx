@@ -1,9 +1,5 @@
 package slicex
 
-import (
-	"sort"
-)
-
 // Contains 是否包含
 func Contains[T comparable](slice []T, v T) bool {
 	for _, item := range slice {
@@ -100,14 +96,4 @@ func Exclude[T comparable](target []T, exclude []T) []T {
 		return result
 	}
 	return target
-}
-
-// SortAsc 数组正序
-func SortAsc(slice []string) {
-	sort.Sort(sort.StringSlice(slice))
-}
-
-// SortDesc 数组倒叙
-func SortDesc(slice []string) {
-	sort.Sort(sort.Reverse(sort.StringSlice(slice)))
 }
