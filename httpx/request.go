@@ -3,6 +3,7 @@ package httpx
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"io"
 	"mime/multipart"
 	"net/http"
@@ -55,25 +56,50 @@ type Request struct {
 	decorators []Decorator       // 请求装饰器
 }
 
-// Params 添加查询参数
-func (r *Request) Params(params map[string]string) *Request {
+// SetMethod 设置请求方法
+func (r *Request) SetMethod(method string) *Request {
+	if method != "" {
+		r.method = method
+	}
+	return r
+}
+
+// SetURL 设置请求URL
+func (r *Request) SetURL(url_ string) *Request {
+	if url_ != "" {
+		r.url = url_
+	}
+	return r
+}
+
+// AddTrace 添加跟踪ID
+func (r *Request) AddTrace(trace string) *Request {
+	r.trace = trace
+	return r
+}
+
+// Debug 开启调试模式
+func (r *Request) Debug() *Request {
+	r.debug = true
+	return r
+}
+
+// AddParams 添加查询参数
+func (r *Request) AddParams(params map[string]string) *Request {
 	if len(params) == 0 {
 		return r
 	}
-
 	// 解析现有URL查询参数
-	parsedURL, err := url.Parse(r.url)
+	parse, err := url.Parse(r.url)
 	if err != nil {
 		return r
 	}
-
-	query := parsedURL.Query()
+	values := parse.Query()
 	for k, v := range params {
-		query.Add(k, v)
+		values.Add(k, v)
 	}
-	parsedURL.RawQuery = query.Encode()
-	r.url = parsedURL.String()
-
+	parse.RawQuery = values.Encode()
+	r.url = parse.String()
 	return r
 }
 
@@ -97,39 +123,47 @@ func (r *Request) AddForm(form url.Values) *Request {
 
 // AddFile 添加请求文件
 func (r *Request) AddFile(file *File) *Request {
-	r.files = append(r.files, file)
-	return r
-}
-
-// AddHeaders 添加请求头
-func (r *Request) AddHeaders(headers map[string]string) *Request {
-	for k, v := range headers {
-		r.headers[k] = v
+	if file != nil {
+		r.files = append(r.files, file)
 	}
 	return r
 }
 
 // AddHeader 添加请求头
 func (r *Request) AddHeader(key, value string) *Request {
-	r.headers[key] = value
+	if key != "" && value != "" {
+		r.headers[key] = value
+	}
+	return r
+}
+
+// AddHeaders 添加请求头
+func (r *Request) AddHeaders(headers map[string]string) *Request {
+	for k, v := range headers {
+		r.AddHeader(k, v)
+	}
+	return r
+}
+
+// AddCookie 添加请求cookie
+func (r *Request) AddCookie(cookie *http.Cookie) *Request {
+	if cookie != nil {
+		r.cookies = append(r.cookies, cookie)
+	}
+	return r
+}
+
+// AddCookies 添加请求cookie
+func (r *Request) AddCookies(cookies []*http.Cookie) *Request {
+	if len(cookies) > 0 {
+		r.cookies = append(r.cookies, cookies...)
+	}
 	return r
 }
 
 // AddDecorator 添加请求装饰器
 func (r *Request) AddDecorator(decorators ...Decorator) *Request {
 	r.decorators = append(r.decorators, decorators...)
-	return r
-}
-
-// Debug 开启调试模式
-func (r *Request) Debug() *Request {
-	r.debug = true
-	return r
-}
-
-// Trace 添加跟踪ID
-func (r *Request) Trace(trace string) *Request {
-	r.trace = trace
 	return r
 }
 
@@ -160,11 +194,11 @@ func (r *Request) NewHttpRequest() (*http.Request, error) {
 func (r *Request) getBodyReader() (io.Reader, error) {
 	if r.body != nil {
 		r.AddHeader(ContentType, ApplicationJSON)
-		marshal, err := json.Marshal(r.body)
+		b, err := json.Marshal(r.body)
 		if err != nil {
 			return nil, errorx.Wrap(err, "marshal body error")
 		}
-		return bytes.NewReader(marshal), nil
+		return bytes.NewReader(b), nil
 	} else if len(r.form) > 0 {
 		r.AddHeader(ContentType, ApplicationForm)
 		return strings.NewReader(r.form.Encode()), nil
@@ -182,7 +216,9 @@ func (r *Request) getBodyReader() (io.Reader, error) {
 			}
 			if file.Params != nil && len(file.Params) > 0 {
 				for k, v := range file.Params {
-					_ = writer.WriteField(k, v)
+					if err = writer.WriteField(k, v); err != nil {
+						return nil, errorx.Wrap(err, fmt.Sprintf("write file params [%s:%s] error", k, v))
+					}
 				}
 			}
 		}
@@ -199,15 +235,17 @@ func (r *Request) getBodyReader() (io.Reader, error) {
 // 请求装饰
 func (r *Request) decorate(request *http.Request) {
 	for _, decorator := range r.decorators {
-		decorator.Decorate(request)
+		if decorator != nil {
+			decorator.Decorate(request)
+		}
 	}
 }
 
 // 设置请求头
 func (r *Request) setRequestHeaders(request *http.Request) {
 	if r.headers != nil && len(r.headers) > 0 {
-		for key, val := range r.headers {
-			request.Header.Set(key, val)
+		for key, value := range r.headers {
+			request.Header.Set(key, value)
 		}
 	}
 }
@@ -223,21 +261,20 @@ func (r *Request) setRequestCookie(request *http.Request) {
 
 // Send 发送请求
 func (r *Request) Send(client ...*http.Client) (*Response, error) {
-	request, err := r.NewHttpRequest()
-	if err != nil {
-		return nil, errorx.Wrap(err, "new http request error")
-	}
 	// 发送请求
 	var response *Response
-	if response, err = SendHttpRequest(request, client...); err != nil {
+	if request, err := r.NewHttpRequest(); err != nil {
+		return nil, errorx.Wrap(err, "new http request error")
+	} else if response, err = SendHttpRequest(request, client...); err != nil {
 		return response, errorx.Wrap(err, "send http request error")
 	}
+	// 添加trace
 	response.AddTrace(r.trace)
 	// 打印调试信息
 	if r.debug {
 		logger := log.WithField("http_debug", true)
 		if trace := r.trace; trace != "" {
-			logger = logger.WithField("Trace", trace)
+			logger = logger.WithField("trace", trace)
 		}
 		logger.Printf("http_url: %s", r.url)
 		logger.Printf("http_body: %s", string(response.body))

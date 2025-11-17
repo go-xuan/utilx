@@ -21,7 +21,7 @@ func Ground(f float64, prec int) float64 {
 }
 
 // Min 三数取小
-func Min[T int | int32 | int64 | uint | float32 | float64](a, b, c T) T {
+func Min[T ~int | ~int32 | ~int64 | ~uint | float32 | ~float64](a, b, c T) T {
 	if a <= b && a <= c {
 		return a
 	} else if b <= a && b <= c {
@@ -31,7 +31,7 @@ func Min[T int | int32 | int64 | uint | float32 | float64](a, b, c T) T {
 }
 
 // Max 三数取大
-func Max[T int | int32 | int64 | uint | float32 | float64](a, b, c T) T {
+func Max[T ~int | ~int32 | ~int64 | ~uint | float32 | ~float64](a, b, c T) T {
 	if a >= b && a >= c {
 		return a
 	} else if b >= a && b >= c {

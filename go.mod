@@ -4,7 +4,7 @@ go 1.18
 
 require (
 	github.com/BurntSushi/toml v1.5.0
-	github.com/go-xuan/typex v1.25.3
+	github.com/go-xuan/typex v1.25.4
 	github.com/google/uuid v1.6.0
 	github.com/magiconair/properties v1.8.6 // 1.8.7以上go版本需要升级到1.19
 	github.com/robfig/cron/v3 v3.0.1

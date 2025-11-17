@@ -30,7 +30,7 @@ func GetValue(ctx context.Context, key string) typex.Value {
 	if value := getValue(ctx, key); value != nil {
 		return typex.NewValue(value)
 	}
-	return typex.ZeroValue()
+	return typex.NewZero()
 }
 
 func getValue(ctx context.Context, key string) any {

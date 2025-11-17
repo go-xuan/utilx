@@ -55,8 +55,8 @@ func (c *Command) OutputRun(output func(line string)) error {
 	}
 
 	var err error
-	var stdoutPipe,stderrPipe io.ReadCloser
-	if stdoutPipe, err = c.cmd.StdoutPipe();err != nil {
+	var stdoutPipe, stderrPipe io.ReadCloser
+	if stdoutPipe, err = c.cmd.StdoutPipe(); err != nil {
 		return errorx.Wrap(err, "stdout pipe error")
 	}
 	if stderrPipe, err = c.cmd.StderrPipe(); err != nil {
@@ -79,7 +79,7 @@ func (c *Command) OutputRun(output func(line string)) error {
 	return nil
 }
 
-//
+// pipeOutput 读取管道输出
 func pipeOutput(pipe io.ReadCloser, output func(string)) {
 	defer pipe.Close()
 	scanner := bufio.NewScanner(pipe)
@@ -87,6 +87,6 @@ func pipeOutput(pipe io.ReadCloser, output func(string)) {
 		output(scanner.Text())
 	}
 	if err := scanner.Err(); err != nil {
-		panic(err)
+		output("pipe output scan error: " + err.Error())
 	}
 }

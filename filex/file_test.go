@@ -6,10 +6,10 @@ import (
 	"testing"
 )
 
-func TestFileSplit(t *testing.T) {
+func TestSplitFile(t *testing.T) {
 	filePath := "./nohup.log"
-	fmt.Println(Analyse(filePath))
-	files, err := FileSplit(filePath, 5000)
+	fmt.Println(AnalysePath(filePath))
+	files, err := SplitFile(filePath, 5000)
 	if err != nil {
 		t.Log(err)
 	}

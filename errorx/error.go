@@ -6,6 +6,40 @@ import (
 	"runtime"
 )
 
+// New 创建error
+func New(v any) error {
+	var err = &Error{stack: getStack()}
+	switch e := v.(type) {
+	case error:
+		err.source = e
+		err.msg = e.Error()
+	case string:
+		err.msg = e
+	default:
+		err.msg = fmt.Sprint(e)
+	}
+	return err
+}
+
+// Errorf 创建格式化error
+func Errorf(format string, a ...interface{}) error {
+	return &Error{
+		msg:   fmt.Sprintf(format, a...),
+		stack: getStack(),
+	}
+}
+
+// Unwrap 解包装
+func Unwrap(err error) error {
+	if t, ok := err.(interface {
+		Unwrap() error
+	}); ok {
+		return t.Unwrap()
+	} else {
+		return nil
+	}
+}
+
 // Error 通用error
 type Error struct {
 	source error  // 源error
@@ -36,20 +70,6 @@ func (err *Error) Format(s fmt.State, verb rune) {
 	}
 }
 
-func New(v any) error {
-	var err = &Error{stack: getStack()}
-	switch e := v.(type) {
-	case error:
-		err.source = e
-		err.msg = e.Error()
-	case string:
-		err.msg = e
-	default:
-		err.msg = fmt.Sprint(e)
-	}
-	return err
-}
-
 func Wrap(v any, msg string) error {
 	var err = &Error{msg: msg}
 	switch e := v.(type) {
@@ -64,20 +84,6 @@ func Wrap(v any, msg string) error {
 		err.stack = getStack()
 	}
 	return err
-}
-
-func Unwrap(err error) error {
-	if t, ok := err.(interface {
-		Unwrap() error
-	}); ok {
-		return t.Unwrap()
-	} else {
-		return nil
-	}
-}
-
-func Errorf(format string, a ...interface{}) error {
-	return &Error{msg: fmt.Sprintf(format, a...), stack: getStack()}
 }
 
 // 调用栈

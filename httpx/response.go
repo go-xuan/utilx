@@ -49,7 +49,7 @@ func (r *Response) GetBody() []byte {
 	return r.body
 }
 
-// AddTrace 添加响应追踪标识
+// AddTrace 添加响应trace
 func (r *Response) AddTrace(trace string) {
 	if trace != "" {
 		r.trace = trace

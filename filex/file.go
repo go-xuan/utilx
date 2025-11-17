@@ -164,13 +164,13 @@ func MustOpen(dir string, name string) (*os.File, error) {
 	return Open(path, Append)
 }
 
-// FileSplit 文件拆分
-func FileSplit(path string, size int) ([]string, error) {
+// SplitFile 拆分文件
+func SplitFile(path string, size int) ([]string, error) {
 	file, err := os.OpenFile(path, os.O_RDONLY, 0666)
 	if err != nil {
 		return nil, errorx.Wrap(err, "open file error")
 	}
-	dir, filename, suffix := Analyse(path)
+	dir, filename, suffix := AnalysePath(path)
 	dir = filepath.Join(dir, filename)
 	reader := bufio.NewReader(file)
 	count, index := 1, 1
@@ -180,22 +180,22 @@ func FileSplit(path string, size int) ([]string, error) {
 		if index < size {
 			var line []byte
 			if line, _, err = reader.ReadLine(); err == io.EOF {
-				path := filepath.Join(dir, "split_"+strconv.Itoa(count)+suffix)
-				if err = WriteFileString(path, sb.String()); err != nil {
+				subpath := filepath.Join(dir, "split_"+strconv.Itoa(count)+suffix)
+				if err = WriteFileString(subpath, sb.String()); err != nil {
 					return nil, errorx.Wrap(err, "write file error")
 				}
-				paths = append(paths, path)
+				paths = append(paths, subpath)
 				break
 			}
 			sb.WriteString("\n")
 			sb.Write(line)
 		} else {
 			index = 1
-			path := filepath.Join(dir, "split_"+strconv.Itoa(count)+suffix)
-			if err = WriteFileString(path, sb.String()); err != nil {
+			subpath := filepath.Join(dir, "split_"+strconv.Itoa(count)+suffix)
+			if err = WriteFileString(subpath, sb.String()); err != nil {
 				return nil, errorx.Wrap(err, "write file error")
 			}
-			paths = append(paths, path)
+			paths = append(paths, subpath)
 			sb.Reset()
 			count++
 		}
@@ -205,6 +205,31 @@ func FileSplit(path string, size int) ([]string, error) {
 		return nil, errorx.Wrap(err, "close file error")
 	}
 	return paths, nil
+}
+
+// SplitPath 拆分路径为文件夹和文件名
+func SplitPath(path string) (string, string) {
+	if path != "" {
+		if stringx.ContainsAny(path, "/", "\\") {
+			return filepath.Split(path)
+		} else {
+			return "", path
+		}
+	}
+	return "", ""
+}
+
+// AnalysePath 拆分路径为文件夹、文件名和文件后缀
+func AnalysePath(path string) (dir, name, suffix string) {
+	if dir, name = filepath.Split(path); name != "" {
+		for i := len(name) - 1; i >= 0; i-- {
+			if name[i] == '.' {
+				name, suffix = name[:i], name[i:]
+				return
+			}
+		}
+	}
+	return
 }
 
 // Pwd 获取绝对路径
@@ -222,18 +247,6 @@ func Pwd(path ...string) string {
 // Depth 获取路径深度
 func Depth(path string) int {
 	return strings.Count(filepath.Clean(path), string(filepath.Separator))
-}
-
-// SplitPath 拆分为文件路径和文件名
-func SplitPath(path string) (string, string) {
-	if path != "" {
-		if stringx.ContainsAny(path, "/", "\\") {
-			return filepath.Split(path)
-		} else {
-			return "", path
-		}
-	}
-	return "", ""
 }
 
 // IsDir 判断是否文件夹
@@ -333,19 +346,6 @@ func IsEmptyDir(dir string) bool {
 	_ = file.Close()
 	// 如果目录内容为空，则目录为空
 	return len(names) == 0
-}
-
-// Analyse 获取文件夹、文件名，文件后缀
-func Analyse(path string) (dir, name, suffix string) {
-	if dir, name = filepath.Split(path); name != "" {
-		for i := len(name) - 1; i >= 0; i-- {
-			if name[i] == '.' {
-				name, suffix = name[:i], name[i:]
-				return
-			}
-		}
-	}
-	return
 }
 
 // SetSuffix 设置后缀
