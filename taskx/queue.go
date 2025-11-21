@@ -4,9 +4,9 @@ import (
 	"context"
 	"sync"
 
-	log "github.com/sirupsen/logrus"
-
 	"github.com/go-xuan/utilx/errorx"
+	"github.com/go-xuan/utilx/funcx"
+	log "github.com/sirupsen/logrus"
 )
 
 // NewQueue 队列任务处理调度器
@@ -20,10 +20,10 @@ func NewQueue(name string) *Queue {
 
 // queueTask 队列任务
 type queueTask struct {
-	name    string     // 任务ID
-	execute Execute    // 任务执行函数
-	prev    *queueTask // 指向上一个任务
-	next    *queueTask // 指向下一个任务
+	name     string     // 任务ID
+	function funcx.X    // 任务执行函数
+	prev     *queueTask // 指向上一个任务
+	next     *queueTask // 指向下一个任务
 }
 
 // Queue 队列任务处理调度器
@@ -57,11 +57,11 @@ func (q *Queue) Execute(ctx context.Context) error {
 			logger = logger.WithField("next", current.next.name)
 		}
 
-		if err := current.execute(ctx); err != nil {
-			logger.WithField("error", err.Error()).Error("queue task execute error")
+		if err := current.function(ctx); err != nil {
+			logger.WithError(err).Error("queue task execute error")
 			return errorx.Wrap(err, "queue task execute error")
 		}
-		logger.Info("queue task execute success")
+		logger.Info("queue task func execute success")
 		// 从任务列表中删除当前任务并更新当前任务指针
 		delete(q.tasks, current.name)
 		current = current.next
@@ -70,63 +70,63 @@ func (q *Queue) Execute(ctx context.Context) error {
 }
 
 // Add 新增任务（默认尾插）
-func (q *Queue) Add(name string, execute Execute) {
-	q.AddTail(name, execute)
+func (q *Queue) Add(name string, fn funcx.X) {
+	q.AddTail(name, fn)
 }
 
 // AddTail 尾插（当前新增任务添加到队列末尾）
-func (q *Queue) AddTail(name string, execute Execute) {
+func (q *Queue) AddTail(name string, fn funcx.X) {
 	logger := log.WithField("name", name).
 		WithField("queue", q.GetID()).
-		WithField("position", "tail of queueTask")
+		WithField("position", "tail of queue")
 
-	if name == "" || execute == nil {
-		logger.Error("tasks name is empty or tasks execute is nil")
+	if name == "" || fn == nil {
+		logger.Error("tasks name is empty or tasks func is nil")
 		return
 	}
 	q.mutex.Lock()
 	defer q.mutex.Unlock()
 
-	if q.cover(name, execute) {
+	if q.cover(name, fn) {
 		logger.Error("queue add tail failed, tasks already exists")
 		return
 	}
 
-	newTask := &queueTask{name: name, execute: execute}
+	task := &queueTask{name: name, function: fn}
 	if q.tail != nil {
 		// 队列不为空，将新任务添加到尾部
-		newTask.prev = q.tail
-		q.tail.next = newTask
-		q.tail = newTask
+		task.prev = q.tail
+		q.tail.next = task
+		q.tail = task
 	} else {
 		// 队列为空，新任务既是头也是尾
-		q.head = newTask
-		q.tail = newTask
+		q.head = task
+		q.tail = task
 	}
 
-	q.tasks[name] = newTask
+	q.tasks[name] = task
 	logger.Info("queue add tail success")
 }
 
 // AddHead 头插（当前新增任务添加到队列首位）
-func (q *Queue) AddHead(name string, execute Execute) {
+func (q *Queue) AddHead(name string, fn funcx.X) {
 	logger := log.WithField("name", name).
 		WithField("queue", q.GetID()).
-		WithField("position", "head of queueTask")
+		WithField("position", "head of queue")
 
-	if name == "" || execute == nil {
-		logger.Error("tasks name is empty or tasks execute is nil")
+	if name == "" || fn == nil {
+		logger.Error("tasks name is empty or tasks func is nil")
 		return
 	}
 	q.mutex.Lock()
 	defer q.mutex.Unlock()
 
-	if q.cover(name, execute) {
+	if q.cover(name, fn) {
 		logger.Error("queue add head failed: tasks already exists")
 		return
 	}
 
-	newTask := &queueTask{name: name, execute: execute}
+	newTask := &queueTask{name: name, function: fn}
 	if q.head != nil {
 		// 队列已有任务，将新任务插入到头部
 		q.head.prev = newTask
@@ -142,19 +142,19 @@ func (q *Queue) AddHead(name string, execute Execute) {
 }
 
 // AddAfter 后插队(将新任务添加到目标任务之后)
-func (q *Queue) AddAfter(baseName, name string, execute Execute) {
+func (q *Queue) AddAfter(baseName, name string, fn funcx.X) {
 	logger := log.WithField("name", name).
 		WithField("queue", q.GetID()).
 		WithField("position", "after task: "+baseName)
-	if name == "" || execute == nil {
-		logger.Error("tasks name is empty or tasks execute is nil")
+	if name == "" || fn == nil {
+		logger.Error("task name is empty or task func is nil")
 		return
 	}
 
 	q.mutex.Lock()
 	defer q.mutex.Unlock()
 
-	if q.cover(name, execute) {
+	if q.cover(name, fn) {
 		logger.Error("queue add after failed: tasks already exists")
 		return
 	}
@@ -165,7 +165,7 @@ func (q *Queue) AddAfter(baseName, name string, execute Execute) {
 		return
 	}
 
-	newTask := &queueTask{name: name, execute: execute}
+	newTask := &queueTask{name: name, function: fn}
 	if baseTask.next != nil { // 目标任务存在且不是队尾，则插入到目标任务之后
 		newTask.next = baseTask.next
 		newTask.prev = baseTask
@@ -181,19 +181,19 @@ func (q *Queue) AddAfter(baseName, name string, execute Execute) {
 }
 
 // AddBefore 前插队(将新任务添加到目标任务之后)
-func (q *Queue) AddBefore(baseName, name string, execute Execute) {
+func (q *Queue) AddBefore(baseName, name string, fn funcx.X) {
 	logger := log.WithField("name", name).
 		WithField("queue", q.GetID()).
 		WithField("position", "before task: "+baseName)
-	if name == "" || execute == nil {
-		logger.Error("tasks name is empty or tasks execute is nil")
+	if name == "" || fn == nil {
+		logger.Error("tasks name is empty or tasks func is nil")
 		return
 	}
 	q.mutex.Lock()
 	defer q.mutex.Unlock()
 
-	if q.cover(name, execute) {
-		logger.Error("queue add before failed: tasks already exists")
+	if q.cover(name, fn) {
+		logger.Error("queue add before failed: task already exists")
 		return
 	}
 
@@ -203,7 +203,7 @@ func (q *Queue) AddBefore(baseName, name string, execute Execute) {
 		return
 	}
 
-	newTask := &queueTask{name: name, execute: execute}
+	newTask := &queueTask{name: name, function: fn}
 	if baseTask.prev != nil { // 目标任务不是队列头部，插入到目标任务之前
 		newTask.prev = baseTask.prev
 		newTask.next = baseTask
@@ -249,15 +249,15 @@ func (q *Queue) Remove(name string) {
 			delete(q.tasks, name)
 			logger.Info("queue remove success")
 		} else {
-			logger.Error("queue remove failed: execute name does not exist")
+			logger.Error("queue remove failed: task name does not exist")
 		}
 	}
 }
 
 // 覆盖任务
-func (q *Queue) cover(name string, execute Execute) bool {
+func (q *Queue) cover(name string, fn funcx.X) bool {
 	if exist, ok := q.tasks[name]; ok {
-		exist.execute = execute
+		exist.function = fn
 		return true
 	}
 	return false

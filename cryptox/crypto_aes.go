@@ -5,7 +5,7 @@ import (
 	"crypto/aes"
 	"crypto/cipher"
 	"fmt"
-	
+
 	"github.com/go-xuan/utilx/errorx"
 	"github.com/go-xuan/utilx/randx"
 )
@@ -103,7 +103,7 @@ func (c *AesCBC) Encrypt(plaintext []byte) ([]byte, error) {
 
 func (c *AesCBC) Decrypt(ciphertext []byte) ([]byte, error) {
 	if size, blockSize := len(ciphertext), c.block.BlockSize(); size%blockSize != 0 {
-		return nil, errorx.Errorf("the ciphertext size error: %d/%d", size, blockSize)
+		return nil, errorx.Newf("the ciphertext size error: %d/%d", size, blockSize)
 	}
 	var plaintext = make([]byte, len(ciphertext))
 	cipher.NewCBCDecrypter(c.block, c.iv).CryptBlocks(plaintext, ciphertext)
@@ -132,7 +132,7 @@ func (c *AesCFB) Encrypt(plaintext []byte) ([]byte, error) {
 
 func (c *AesCFB) Decrypt(ciphertext []byte) ([]byte, error) {
 	if size, blockSize := len(ciphertext), c.block.BlockSize(); size%blockSize != 0 {
-		return nil, errorx.Errorf("the ciphertext size error: %d/%d", size, blockSize)
+		return nil, errorx.Newf("the ciphertext size error: %d/%d", size, blockSize)
 	}
 	var plaintext = make([]byte, len(ciphertext))
 	cipher.NewCFBDecrypter(c.block, c.iv).XORKeyStream(plaintext, ciphertext)
@@ -165,7 +165,7 @@ func (c *AesECB) Encrypt(plaintext []byte) ([]byte, error) {
 func (c *AesECB) Decrypt(ciphertext []byte) ([]byte, error) {
 	size, blockSize := len(ciphertext), c.block.BlockSize()
 	if size%blockSize != 0 {
-		return nil, errorx.Errorf("the ciphertext size error: %d/%d", size, blockSize)
+		return nil, errorx.Newf("the ciphertext size error: %d/%d", size, blockSize)
 	}
 	var plaintext = make([]byte, size)
 	for i := 0; i < size; i += blockSize {

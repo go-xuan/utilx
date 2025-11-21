@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/go-xuan/utilx/errorx"
+	"github.com/go-xuan/utilx/funcx"
 	"github.com/robfig/cron/v3"
 	log "github.com/sirupsen/logrus"
 )
@@ -30,7 +31,7 @@ func NewCronScheduler(id string) *CronScheduler {
 		),
 		ids:   []string{},
 		tasks: make(map[string]*CronTask),
-		wraps: make([]Wrap, 0),
+		wraps: make([]funcx.WarpX, 0),
 	}
 }
 
@@ -42,7 +43,7 @@ type CronScheduler struct {
 	status uint                 // 调度器状态（0-初始化；1-待运行；2-运行中；3-停止）
 	ids    []string             // 任务名称
 	tasks  map[string]*CronTask // 定时任务
-	wraps  []Wrap               // 定时任务包装器
+	wraps  []funcx.WarpX        // 定时任务执行函数包装器
 }
 
 func (c *CronScheduler) GetID() string {
@@ -68,7 +69,7 @@ func (c *CronScheduler) Execute(ctx context.Context) error {
 }
 
 // AddWrap 添加包装器
-func (c *CronScheduler) AddWrap(wraps ...Wrap) *CronScheduler {
+func (c *CronScheduler) AddWrap(wraps ...funcx.WarpX) *CronScheduler {
 	c.wraps = append(c.wraps, wraps...)
 	return c
 }
@@ -113,7 +114,7 @@ func (c *CronScheduler) Remove(id string) error {
 		c.cron.Remove(task.entry.ID)
 		delete(c.tasks, id)
 	} else {
-		return errorx.New("execute not found: " + id)
+		return errorx.Newf("task not found: %s", id)
 	}
 	// 当任务清零则状态值归零
 	if len(c.tasks) == 0 {
@@ -194,20 +195,20 @@ func ParseDurationBySpec(spec string) time.Duration {
 }
 
 // NewCronTask 创建定时任务
-func NewCronTask(id, spec string, execute Execute) *CronTask {
+func NewCronTask(id, spec string, fn funcx.X) *CronTask {
 	return &CronTask{
-		id:      id,
-		spec:    spec,
-		execute: execute,
+		id:       id,
+		spec:     spec,
+		function: fn,
 	}
 }
 
 // CronTask 定时任务
 type CronTask struct {
-	id      string     // 任务ID
-	spec    string     // 定时任务表达式
-	execute Execute    // 执行任务函数
-	entry   cron.Entry // 定时任务entry
+	id       string     // 任务ID
+	function funcx.X    // 执行函数
+	spec     string     // 定时任务表达式
+	entry    cron.Entry // 定时任务entry
 }
 
 // Run 执行定时任务
@@ -224,12 +225,11 @@ func (t *CronTask) GetID() string {
 
 func (t *CronTask) Execute(ctx context.Context) error {
 	logger := log.WithField("id", t.GetID())
-	if err := t.execute(ctx); err != nil {
-		logger.WithField("error", err.Error()).
-			Error("cron task execute error")
-		return errorx.New("cron task execute error")
+	if err := t.function(ctx); err != nil {
+		logger.WithError(err).Error("cron task function execute error")
+		return errorx.New("cron task function execute error")
 	}
-	logger.Info("cron task execute success")
+	logger.Info("cron task function execute success")
 	return nil
 }
 
@@ -244,14 +244,14 @@ func (t *CronTask) GetEntry() cron.Entry {
 }
 
 // Wrap 包装定时任务执行函数
-func (t *CronTask) Wrap(wraps ...Wrap) {
-	execute := t.execute
-	if execute != nil && len(wraps) > 0 {
+func (t *CronTask) Wrap(wraps ...funcx.WarpX) {
+	function := t.function
+	if function != nil && len(wraps) > 0 {
 		for _, wrap := range wraps {
-			execute = wrap(execute)
+			function = wrap(function)
 		}
 	}
-	t.execute = execute
+	t.function = function
 }
 
 // GetMeta 获取定时任务元数据

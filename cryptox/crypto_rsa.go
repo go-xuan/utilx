@@ -6,7 +6,6 @@ import (
 	"crypto/rsa"
 	"crypto/x509"
 	"encoding/pem"
-	"strconv"
 
 	"github.com/go-xuan/utilx/errorx"
 	"github.com/go-xuan/utilx/filex"
@@ -59,7 +58,7 @@ func ParseRsaCrypto(privateData []byte, mode Mode) (*RsaCrypto, error) {
 		}
 		return &RsaCrypto{PrivateKey: privateKey.(*rsa.PrivateKey)}, nil
 	default:
-		return nil, errorx.New("unsupported private mode:" + strconv.Itoa(int(mode)))
+		return nil, errorx.Newf("unsupported private mode: %d", mode)
 	}
 }
 
@@ -96,7 +95,7 @@ func (c *RsaCrypto) SavePrivateKey(path string, mode Mode) error {
 			Bytes: data,
 		})
 	default:
-		return errorx.New("unsupported private key mode: " + strconv.Itoa(int(mode)))
+		return errorx.Newf("unsupported private key mode: %d", mode)
 	}
 }
 
@@ -118,7 +117,7 @@ func (c *RsaCrypto) SavePublicKey(path string, mode Mode) error {
 			Bytes: data,
 		})
 	default:
-		return errorx.New("unsupported public key mode: " + strconv.Itoa(int(mode)))
+		return errorx.Newf("unsupported public key mode: %d", mode)
 	}
 }
 
@@ -138,7 +137,7 @@ func RsaEncrypt(plaintext, publicKey []byte, mode Mode) ([]byte, error) {
 		}
 		return rsa.EncryptPKCS1v15(rand.Reader, key.(*rsa.PublicKey), plaintext)
 	default:
-		return nil, errorx.New("unsupported public mode: " + strconv.Itoa(int(mode)))
+		return nil, errorx.Newf("unsupported public key mode: %d", mode)
 	}
 }
 
@@ -158,7 +157,7 @@ func ParseRsaPrivateKey(publicKey []byte, mode Mode) (*rsa.PrivateKey, error) {
 		}
 		return key.(*rsa.PrivateKey), nil
 	default:
-		return nil, errorx.New("unsupported private mode:" + strconv.Itoa(int(mode)))
+		return nil, errorx.Newf("unsupported private key mode: %d", mode)
 	}
 }
 
@@ -178,7 +177,7 @@ func ParseRsaPublicKey(publicKey []byte, mode Mode) (*rsa.PublicKey, error) {
 		}
 		return key.(*rsa.PublicKey), nil
 	default:
-		return nil, errorx.New("unsupported public mode:" + strconv.Itoa(int(mode)))
+		return nil, errorx.Newf("unsupported public key mode: %d", mode)
 	}
 }
 

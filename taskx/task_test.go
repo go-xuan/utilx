@@ -25,7 +25,7 @@ func (t testTask) Execute(ctx context.Context) error {
 	if value <= threshold {
 		return nil
 	}
-	return errorx.Errorf("error: id=%d, value=%d，threshold=%d", t.id, value, threshold)
+	return errorx.Newf("error: id=%d, value=%d，threshold=%d", t.id, value, threshold)
 }
 
 func TestTask(t *testing.T) {

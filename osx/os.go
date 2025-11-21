@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/go-xuan/typex"
+	"github.com/sirupsen/logrus"
 
 	"github.com/go-xuan/utilx/anyx"
 	"github.com/go-xuan/utilx/errorx"
@@ -18,6 +19,18 @@ const (
 	MacOS     = "darwin"
 )
 
+// PanicRecover 恢复服务运行
+func PanicRecover() {
+	if err := recover(); err != nil {
+		logger := logrus.WithField(logrus.ErrorKey, err)
+		if _, file, line, ok := runtime.Caller(2); ok {
+			logger = logger.WithField("file", file).WithField("line", line)
+		}
+		logger.Error("recover panic")
+		return
+	}
+}
+
 func GetHome() string {
 	switch runtime.GOOS {
 	case WindowsOS:
@@ -25,7 +38,8 @@ func GetHome() string {
 	case MacOS:
 		return os.Getenv("HOME")
 	default:
-		return ""
+		v, _ := os.UserHomeDir()
+		return v
 	}
 }
 

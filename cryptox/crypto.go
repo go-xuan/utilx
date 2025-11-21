@@ -1,5 +1,6 @@
 package cryptox
 
+// Mode 加密模式
 type Mode uint
 
 // Crypto 加解密接口
