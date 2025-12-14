@@ -90,7 +90,7 @@ func (c *Command) RunRealTime(realtime func(b []byte)) error {
 
 // pipeOutput 读取管道输出
 func pipeOutput(pipe io.ReadCloser, realtime func(b []byte)) {
-	defer errorx.Collect(pipe.Close())
+	defer errorx.Close(pipe)
 	scanner := bufio.NewScanner(pipe)
 	for scanner.Scan() {
 		realtime(scanner.Bytes())

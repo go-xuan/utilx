@@ -32,18 +32,18 @@ func (t tomlImpl) Unmarshal(data []byte, v interface{}) error {
 }
 
 func (t tomlImpl) Read(path string, v interface{}) error {
-	if data, err := readFile(path); err != nil {
+	data, err := readFile(path)
+	if err != nil {
 		return errorx.Wrap(err, "read file error")
-	} else {
-		return t.Unmarshal(data, v)
 	}
+	return t.Unmarshal(data, v)
 }
 
 func (t tomlImpl) Write(path string, v interface{}) error {
 	if data, err := t.Marshal(v); err != nil {
 		return errorx.Wrap(err, "toml marshal error")
 	} else if err = filex.WriteFile(path, data); err != nil {
-		return errorx.Wrap(err, "write file error")
+		return errorx.Wrap(err, "write toml file error")
 	}
 	return nil
 }

@@ -16,7 +16,20 @@ func TestSplitFile(t *testing.T) {
 	fmt.Println(files)
 }
 
-func TestFileWrite(t *testing.T) {
+func TestWriteFile(t *testing.T) {
+	path := "test.txt"
+	data := "11111"
+
+	if err := WriteFileString(path, data); err != nil {
+		fmt.Println(err)
+	}
+
+	if err := WriteFile(path, []byte(data), Append); err != nil {
+		fmt.Println(err)
+	}
+}
+
+func TestWriteFileString(t *testing.T) {
 	_ = WriteFileString("nohup.log", "1111\n", Append)
 	_ = WriteFileString("nohup.log", "2222\n", Append)
 	_ = WriteFileString("nohup.log", "3333\n", Append)

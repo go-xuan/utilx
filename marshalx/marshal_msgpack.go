@@ -26,18 +26,18 @@ func (m msgpackImpl) Unmarshal(data []byte, v interface{}) error {
 }
 
 func (m msgpackImpl) Read(path string, v interface{}) error {
-	if data, err := readFile(path); err != nil {
+	data, err := readFile(path)
+	if err != nil {
 		return errorx.Wrap(err, "read file error")
-	} else {
-		return m.Unmarshal(data, v)
 	}
+	return m.Unmarshal(data, v)
 }
 
 func (m msgpackImpl) Write(path string, v interface{}) error {
 	if data, err := m.Marshal(v); err != nil {
 		return errorx.Wrap(err, "msgpack marshal error")
 	} else if err = filex.WriteFile(path, data); err != nil {
-		return errorx.Wrap(err, "write file error")
+		return errorx.Wrap(err, "write msgpack file error")
 	}
 	return nil
 }

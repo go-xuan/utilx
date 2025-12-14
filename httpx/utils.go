@@ -107,7 +107,7 @@ func DownloadFile(url string) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer errorx.Collect(resp.Body.Close())
+	defer errorx.Close(resp.Body)
 
 	var body []byte
 	if body, err = io.ReadAll(resp.Body); err != nil {

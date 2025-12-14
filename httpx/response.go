@@ -14,8 +14,8 @@ func DoHttpRequest(client *http.Client, request *http.Request) (*Response, error
 	if err != nil {
 		return nil, errorx.Wrap(err, "http client do error")
 	}
-	defer errorx.Collect(resp.Body.Close())
-	
+	defer errorx.Close(resp.Body)
+
 	var body []byte
 	if body, err = io.ReadAll(resp.Body); err != nil {
 		return nil, errorx.Wrap(err, "http response body read error")

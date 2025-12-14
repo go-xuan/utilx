@@ -46,18 +46,18 @@ func (p propertiesImpl) Unmarshal(data []byte, v interface{}) error {
 }
 
 func (p propertiesImpl) Read(path string, v interface{}) error {
-	if data, err := readFile(path); err != nil {
+	data, err := readFile(path)
+	if err != nil {
 		return errorx.Wrap(err, "read file error")
-	} else {
-		return p.Unmarshal(data, v)
 	}
+	return p.Unmarshal(data, v)
 }
 
 func (p propertiesImpl) Write(path string, v interface{}) error {
 	if data, err := p.Marshal(v); err != nil {
 		return errorx.Wrap(err, "properties marshal error")
 	} else if err = filex.WriteFile(path, data); err != nil {
-		return errorx.Wrap(err, "write file error")
+		return errorx.Wrap(err, "write properties file error")
 	}
 	return nil
 }

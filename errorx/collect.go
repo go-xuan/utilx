@@ -2,9 +2,17 @@ package errorx
 
 import (
 	"fmt"
+	"io"
 
 	log "github.com/sirupsen/logrus"
 )
+
+// Close closes the closer and collects the error with collector.
+func Close(closer io.Closer, collector ...Collector) {
+	if closer != nil {
+		Collect(closer.Close(), collector...)
+	}
+}
 
 // Collect collect errors with collector.
 func Collect(err error, collector ...Collector) {

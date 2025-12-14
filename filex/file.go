@@ -36,6 +36,8 @@ func ReadFileLine(path string) ([]string, error) {
 	if err != nil {
 		return nil, errorx.Wrap(err, "open file error")
 	}
+	defer errorx.Close(file)
+
 	// 按行处理txt
 	reader := bufio.NewReader(file)
 	var lines []string
@@ -46,7 +48,6 @@ func ReadFileLine(path string) ([]string, error) {
 		}
 		lines = append(lines, string(line))
 	}
-	defer errorx.Collect(file.Close())
 	return lines, nil
 }
 
@@ -71,7 +72,8 @@ func WriteFile(path string, data []byte, flag ...int) error {
 	if err != nil {
 		return errorx.Wrap(err, "open file error")
 	}
-	defer errorx.Collect(file.Close())
+	defer errorx.Close(file)
+
 	if _, err = file.Write(data); err != nil {
 		return errorx.Wrap(err, "file write error")
 	}
@@ -84,7 +86,8 @@ func WriteFileString(path, data string, flag ...int) error {
 	if err != nil {
 		return errorx.Wrap(err, "open file error")
 	}
-	defer errorx.Collect(file.Close())
+	defer errorx.Close(file)
+
 	if _, err = file.WriteString(data); err != nil {
 		return errorx.Wrap(err, "write string error")
 	}
@@ -97,7 +100,8 @@ func WriteFileLine(path string, content []string, flag ...int) error {
 	if err != nil {
 		return errorx.Wrap(err, "open file error")
 	}
-	defer errorx.Collect(file.Close())
+	defer errorx.Close(file)
+
 	writer := bufio.NewWriter(file)
 	for _, line := range content {
 		_, _ = writer.WriteString(line)
@@ -115,7 +119,8 @@ func WriteCSV(path string, data [][]string) error {
 	if err != nil {
 		return errorx.Wrap(err, "open file error")
 	}
-	defer errorx.Collect(file.Close())
+	defer errorx.Close(file)
+
 	writer := csv.NewWriter(file)
 	writer.Comma = ','
 	writer.UseCRLF = true
@@ -151,7 +156,7 @@ func MustOpen(dir string, name string) (*os.File, error) {
 // Clear 清空文件内容
 func Clear(path string) {
 	file, _ := os.OpenFile(path, os.O_TRUNC, 0644)
-	defer errorx.Collect(file.Close())
+	defer errorx.Close(file)
 }
 
 // SplitFile 拆分文件
@@ -160,6 +165,8 @@ func SplitFile(path string, size int) ([]string, error) {
 	if err != nil {
 		return nil, errorx.Wrap(err, "open file error")
 	}
+	defer errorx.Close(file)
+
 	dir, filename, suffix := AnalysePath(path)
 	dir = filepath.Join(dir, filename)
 	reader := bufio.NewReader(file)
@@ -191,7 +198,7 @@ func SplitFile(path string, size int) ([]string, error) {
 		}
 		index++
 	}
-	defer errorx.Collect(file.Close())
+
 	return paths, nil
 }
 
@@ -258,7 +265,7 @@ func Create(path string) error {
 	if err != nil {
 		return errorx.Wrap(err, "create error")
 	}
-	defer errorx.Collect(file.Close())
+	errorx.Close(file)
 	return nil
 }
 
@@ -268,13 +275,13 @@ func Copy(src, dst string) error {
 	if err != nil {
 		return errorx.Wrap(err, "open file error")
 	}
-	defer errorx.Collect(file.Close())
+	defer errorx.Close(file)
 
 	var cp *os.File
 	if cp, err = os.Create(dst); err != nil {
 		return errorx.Wrap(err, "create copy file error")
 	}
-	defer errorx.Collect(cp.Close())
+	defer errorx.Close(cp)
 
 	if _, err = io.Copy(cp, file); err != nil {
 		return errorx.Wrap(err, "copy file error")
@@ -320,7 +327,7 @@ func IsEmptyDir(path string) bool {
 	if err != nil {
 		return false
 	}
-	defer errorx.Collect(file.Close())
+	defer errorx.Close(file)
 
 	var names []string
 	if names, err = file.Readdirnames(0); err != nil {

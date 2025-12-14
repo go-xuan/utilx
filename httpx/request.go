@@ -61,7 +61,7 @@ func (r *Request) Send() (*Response, error) {
 	} else if resp, err = r.client.Do(request); err != nil {
 		return nil, errorx.Wrap(err, "http client do error")
 	}
-	defer errorx.Collect(resp.Body.Close())
+	defer errorx.Close(resp.Body)
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
