@@ -23,11 +23,11 @@ const (
 
 // ReadFile 读取文件内容
 func ReadFile(path string) ([]byte, error) {
-	if content, err := os.ReadFile(path); err != nil {
+	content, err := os.ReadFile(path)
+	if err != nil {
 		return nil, errorx.Wrap(err, "read file error")
-	} else {
-		return content, nil
 	}
+	return content, nil
 }
 
 // ReadFileLine 按行读取
@@ -46,9 +46,7 @@ func ReadFileLine(path string) ([]string, error) {
 		}
 		lines = append(lines, string(line))
 	}
-	if err = file.Close(); err != nil {
-		return nil, errorx.Wrap(err, "close file error")
-	}
+	defer errorx.Collect(file.Close())
 	return lines, nil
 }
 
@@ -73,11 +71,9 @@ func WriteFile(path string, data []byte, flag ...int) error {
 	if err != nil {
 		return errorx.Wrap(err, "open file error")
 	}
+	defer errorx.Collect(file.Close())
 	if _, err = file.Write(data); err != nil {
 		return errorx.Wrap(err, "file write error")
-	}
-	if err = file.Close(); err != nil {
-		return errorx.Wrap(err, "close file error")
 	}
 	return nil
 }
@@ -88,11 +84,9 @@ func WriteFileString(path, data string, flag ...int) error {
 	if err != nil {
 		return errorx.Wrap(err, "open file error")
 	}
+	defer errorx.Collect(file.Close())
 	if _, err = file.WriteString(data); err != nil {
 		return errorx.Wrap(err, "write string error")
-	}
-	if err = file.Close(); err != nil {
-		return errorx.Wrap(err, "close file error")
 	}
 	return nil
 }
@@ -103,6 +97,7 @@ func WriteFileLine(path string, content []string, flag ...int) error {
 	if err != nil {
 		return errorx.Wrap(err, "open file error")
 	}
+	defer errorx.Collect(file.Close())
 	writer := bufio.NewWriter(file)
 	for _, line := range content {
 		_, _ = writer.WriteString(line)
@@ -110,9 +105,6 @@ func WriteFileLine(path string, content []string, flag ...int) error {
 	}
 	if err = writer.Flush(); err != nil {
 		return errorx.Wrap(err, "writer flush error")
-	}
-	if err = file.Close(); err != nil {
-		return errorx.Wrap(err, "close file error")
 	}
 	return nil
 }
@@ -123,6 +115,7 @@ func WriteCSV(path string, data [][]string) error {
 	if err != nil {
 		return errorx.Wrap(err, "open file error")
 	}
+	defer errorx.Collect(file.Close())
 	writer := csv.NewWriter(file)
 	writer.Comma = ','
 	writer.UseCRLF = true
@@ -130,9 +123,6 @@ func WriteCSV(path string, data [][]string) error {
 		return errorx.Wrap(err, "write csv to file error")
 	}
 	writer.Flush()
-	if err = file.Close(); err != nil {
-		return errorx.Wrap(err, "close file error")
-	}
 	return nil
 }
 
@@ -146,12 +136,6 @@ func Open(path string, flag ...int) (*os.File, error) {
 	return file, nil
 }
 
-// Clear 清空文件内容
-func Clear(path string) {
-	file, _ := os.OpenFile(path, os.O_TRUNC, 0644)
-	_ = file.Close()
-}
-
 // MustOpen 强制打开文件
 func MustOpen(dir string, name string) (*os.File, error) {
 	path, err := filepath.Abs(filepath.Join(dir, name))
@@ -162,6 +146,12 @@ func MustOpen(dir string, name string) (*os.File, error) {
 		return nil, errorx.Wrap(err, "file permission denied")
 	}
 	return Open(path, Append)
+}
+
+// Clear 清空文件内容
+func Clear(path string) {
+	file, _ := os.OpenFile(path, os.O_TRUNC, 0644)
+	defer errorx.Collect(file.Close())
 }
 
 // SplitFile 拆分文件
@@ -201,9 +191,7 @@ func SplitFile(path string, size int) ([]string, error) {
 		}
 		index++
 	}
-	if err = file.Close(); err != nil {
-		return nil, errorx.Wrap(err, "close file error")
-	}
+	defer errorx.Collect(file.Close())
 	return paths, nil
 }
 
@@ -212,9 +200,8 @@ func SplitPath(path string) (string, string) {
 	if path != "" {
 		if stringx.ContainsAny(path, "/", "\\") {
 			return filepath.Split(path)
-		} else {
-			return "", path
 		}
+		return "", path
 	}
 	return "", ""
 }
@@ -238,10 +225,9 @@ func Pwd(path ...string) string {
 		_, file, _, _ := runtime.Caller(1)
 		pwd, _ := filepath.Split(file)
 		return pwd
-	} else {
-		pwd, _ := filepath.Abs(path[0])
-		return pwd
 	}
+	pwd, _ := filepath.Abs(path[0])
+	return pwd
 }
 
 // Depth 获取路径深度
@@ -251,11 +237,11 @@ func Depth(path string) int {
 
 // IsDir 判断是否文件夹
 func IsDir(path string) bool {
-	if fileInfo, err := os.Stat(path); err != nil {
+	info, err := os.Stat(path)
+	if err != nil {
 		return false
-	} else {
-		return fileInfo.IsDir()
 	}
+	return info.IsDir()
 }
 
 // Exists 判断所给路径文件或文件夹是否存在
@@ -272,31 +258,27 @@ func Create(path string) error {
 	if err != nil {
 		return errorx.Wrap(err, "create error")
 	}
-	if err = file.Close(); err != nil {
-		return errorx.Wrap(err, "close file error")
-	}
+	defer errorx.Collect(file.Close())
 	return nil
 }
 
 // Copy 复制文件
 func Copy(src, dst string) error {
-	// 打开源文件
-	srcFile, err := os.Open(src)
+	file, err := os.Open(src)
 	if err != nil {
-		return errorx.Wrap(err, "open source file error")
+		return errorx.Wrap(err, "open file error")
 	}
-	defer srcFile.Close()
-	// 创建目标文件
-	var dstFile *os.File
-	if dstFile, err = os.Create(dst); err != nil {
-		return errorx.Wrap(err, "create destination file error")
+	defer errorx.Collect(file.Close())
+
+	var cp *os.File
+	if cp, err = os.Create(dst); err != nil {
+		return errorx.Wrap(err, "create copy file error")
 	}
-	defer dstFile.Close()
-	// 复制文件内容
-	if _, err = io.Copy(dstFile, srcFile); err != nil {
+	defer errorx.Collect(cp.Close())
+
+	if _, err = io.Copy(cp, file); err != nil {
 		return errorx.Wrap(err, "copy file error")
 	}
-
 	return nil
 }
 
@@ -333,48 +315,26 @@ func CreateDir(path string) {
 }
 
 // IsEmptyDir 检查给定的目录是否为空
-func IsEmptyDir(dir string) bool {
-	file, err := os.Open(dir)
+func IsEmptyDir(path string) bool {
+	file, err := os.Open(path)
 	if err != nil {
 		return false
 	}
-	// 读取目录内容
+	defer errorx.Collect(file.Close())
+
 	var names []string
 	if names, err = file.Readdirnames(0); err != nil {
 		return false
 	}
-	_ = file.Close()
-	// 如果目录内容为空，则目录为空
 	return len(names) == 0
 }
 
-// SetSuffix 设置后缀
-func SetSuffix(path string, suffix string) string {
-	if path != "" {
-		var name = path
-		for i := len(path) - 1; i >= 0; i-- {
-			if path[i] == '.' {
-				name = path[:i]
-			}
-			if path[i] == os.PathSeparator {
-				break
-			}
-		}
-		return name + stringx.AddPrefix(suffix, ".")
-	}
-	return ""
-}
-
 // GetSuffix 获取后缀
-func GetSuffix(path string, withPoint ...bool) string {
+func GetSuffix(path string) string {
 	if path != "" {
-		var p = 1
-		if len(withPoint) > 0 && withPoint[0] {
-			p = 0
-		}
 		for i := len(path) - 1; i >= 0; i-- {
 			if path[i] == '.' {
-				return path[i+p:]
+				return path[i+1:]
 			}
 		}
 	}
@@ -388,26 +348,39 @@ func FileName(path string) string {
 }
 
 type File struct {
-	Path string
-	Info os.FileInfo
+	Path string      // 文件路径
+	Info os.FileInfo // 文件信息
 }
 
 // FileScan 文件扫描
-func FileScan(dir string, keyword string) ([]*File, error) {
+func FileScan(dir string, match string) ([]*File, error) {
+	return FileScanMatch(dir, func(path string, info os.FileInfo) bool {
+		switch {
+		case match == "" || match == "*":
+			return true
+		case match == "dir" && info.IsDir():
+			return true
+		case match == "file" && !info.IsDir():
+			return true
+		case stringx.Index(info.Name(), match) >= 0:
+			return true
+		}
+		return false
+	})
+}
+
+// FileScanMatch 文件扫描匹配（包括下级目录）
+func FileScanMatch(root string, match func(string, os.FileInfo) bool) ([]*File, error) {
 	var files []*File
-	if err := filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
+	if err := filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
-		switch {
-		case keyword == "" || keyword == "*":
-			files = append(files, &File{Path: path, Info: info})
-		case keyword == "dir" && info.IsDir():
-			files = append(files, &File{Path: path, Info: info})
-		case keyword == "file" && !info.IsDir():
-			files = append(files, &File{Path: path, Info: info})
-		case stringx.Index(info.Name(), keyword) >= 0:
-			files = append(files, &File{Path: path, Info: info})
+		if match(path, info) {
+			files = append(files, &File{
+				Path: path,
+				Info: info,
+			})
 		}
 		return nil
 	}); err != nil {
@@ -416,19 +389,17 @@ func FileScan(dir string, keyword string) ([]*File, error) {
 	return files, nil
 }
 
-// FileScanMatch 文件扫描匹配
-func FileScanMatch(root string, match func(path string, info os.FileInfo) bool) ([]*File, error) {
-	var files []*File
-	if err := filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
-		if err != nil {
-			return err
-		}
-		if match(path, info) {
-			files = append(files, &File{Path: path, Info: info})
-		}
-		return nil
-	}); err != nil {
-		return nil, errorx.Wrap(err, "file scan match error")
+// DirScanMatch 文件夹扫描匹配（仅当前目录）
+func DirScanMatch(dir string, match func(os.DirEntry) bool) ([]os.DirEntry, error) {
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return nil, err
 	}
-	return files, nil
+	var result []os.DirEntry
+	for _, entry := range entries {
+		if match(entry) {
+			result = append(result, entry)
+		}
+	}
+	return result, nil
 }

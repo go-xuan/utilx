@@ -1,18 +1,15 @@
 package timex
 
 import (
-	"strings"
 	"time"
 )
 
 type Unit uint
 
 const (
-	TimestampFmt = "20060102150405"
-	TimeFmt      = "2006-01-02 15:04:05"
-	DateFmt      = "2006-01-02"
-	MonthFmt     = "2006-01"
-	AllShengXiao = "鼠,牛,虎,兔,龙,蛇,马,羊,猴,鸡,狗,猪"
+	TimeFmt  = "2006-01-02 15:04:05"
+	DateFmt  = "2006-01-02"
+	MonthFmt = "2006-01"
 )
 
 const (
@@ -106,14 +103,12 @@ func IsLeapYear(year int) bool {
 
 // ShengXiao 获取生肖
 func ShengXiao(year int) string {
-	for {
-		if year < 4 {
-			year = year + 12
-		} else {
-			break
-		}
+	for year < 4 {
+		year += 12
 	}
-	return strings.Split(AllShengXiao, ",")[(year-4)%12]
+	runes := []rune("鼠牛虎兔龙蛇马羊猴鸡狗猪")
+	index := (year - 4) % 12
+	return string(runes[index])
 }
 
 // WeekdayCn 星期

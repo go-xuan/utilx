@@ -10,13 +10,6 @@ import (
 	"github.com/go-xuan/utilx/randx"
 )
 
-const (
-	CBC Mode = iota + 1
-	CFB
-	ECB
-	GCM
-)
-
 // AES 创建AES加密对象（默认CBC模式）
 func AES() (Crypto, error) {
 	key := randx.String(16)
@@ -32,7 +25,7 @@ func AES() (Crypto, error) {
 func NewAesCrypto(key, iv string, mode Mode) (Crypto, error) {
 	block, err := aes.NewCipher([]byte(key))
 	if err != nil {
-		return nil, errorx.Wrap(err, "new cipher error")
+		return nil, errorx.Wrap(err, "new aes cipher error")
 	}
 	switch mode {
 	case CBC:
@@ -44,21 +37,24 @@ func NewAesCrypto(key, iv string, mode Mode) (Crypto, error) {
 	case GCM:
 		return newAesGCM(key, iv, block)
 	default:
-		return nil, errorx.New(fmt.Sprintf("unsupported aes mode: %d", mode))
+		return nil, errorx.New(fmt.Sprintf("unsupported aes mode: %s", mode))
 	}
 }
 
-func newAesGCM(key, nonce string, block cipher.Block) (*AesGCM, error) {
+func newAesGCM(key, iv string, block cipher.Block) (*AesGCM, error) {
+	ag := &AesGCM{
+		key:   key,
+		block: block,
+	}
 	gcm, err := cipher.NewGCM(block)
 	if err != nil {
 		return nil, errorx.Wrap(err, "new gcm error")
+	} else if len(iv) < gcm.NonceSize() {
+		return nil, errorx.New("iv length must greater than gcm nonce size")
 	}
-
-	if len(nonce) < gcm.NonceSize() {
-		return nil, errorx.New("nonce length must greater than gcm nonce size")
-	}
-	nonce = nonce[:gcm.NonceSize()]
-	return &AesGCM{key: key, nonce: []byte(nonce), block: block, gcm: gcm}, nil
+	ag.nonce = []byte(iv[:gcm.NonceSize()])
+	ag.gcm = gcm
+	return ag, nil
 }
 
 type AesGCM struct {
@@ -85,7 +81,11 @@ func newAesCBC(key, iv string, block cipher.Block) (*AesCBC, error) {
 	if len(iv) != block.BlockSize() {
 		return nil, errorx.New("iv length must equal block size")
 	}
-	return &AesCBC{key: key, iv: []byte(iv), block: block}, nil
+	return &AesCBC{
+		key:   key,
+		iv:    []byte(iv),
+		block: block,
+	}, nil
 }
 
 type AesCBC struct {
@@ -103,7 +103,7 @@ func (c *AesCBC) Encrypt(plaintext []byte) ([]byte, error) {
 
 func (c *AesCBC) Decrypt(ciphertext []byte) ([]byte, error) {
 	if size, blockSize := len(ciphertext), c.block.BlockSize(); size%blockSize != 0 {
-		return nil, errorx.Newf("the ciphertext size error: %d/%d", size, blockSize)
+		return nil, errorx.Sprintf("the ciphertext size error: %d/%d", size, blockSize)
 	}
 	var plaintext = make([]byte, len(ciphertext))
 	cipher.NewCBCDecrypter(c.block, c.iv).CryptBlocks(plaintext, ciphertext)
@@ -114,7 +114,11 @@ func newAesCFB(key, iv string, block cipher.Block) (*AesCFB, error) {
 	if len(iv) != block.BlockSize() {
 		return nil, errorx.New("iv length must equal block size")
 	}
-	return &AesCFB{key: key, iv: []byte(iv), block: block}, nil
+	return &AesCFB{
+		key:   key,
+		iv:    []byte(iv),
+		block: block,
+	}, nil
 }
 
 type AesCFB struct {
@@ -132,7 +136,7 @@ func (c *AesCFB) Encrypt(plaintext []byte) ([]byte, error) {
 
 func (c *AesCFB) Decrypt(ciphertext []byte) ([]byte, error) {
 	if size, blockSize := len(ciphertext), c.block.BlockSize(); size%blockSize != 0 {
-		return nil, errorx.Newf("the ciphertext size error: %d/%d", size, blockSize)
+		return nil, errorx.Sprintf("the ciphertext size error: %d/%d", size, blockSize)
 	}
 	var plaintext = make([]byte, len(ciphertext))
 	cipher.NewCFBDecrypter(c.block, c.iv).XORKeyStream(plaintext, ciphertext)
@@ -143,7 +147,11 @@ func newAesECB(key, iv string, block cipher.Block) (*AesECB, error) {
 	if len(iv) != block.BlockSize() {
 		return nil, errorx.New("iv length must equal block size")
 	}
-	return &AesECB{key: key, iv: []byte(iv), block: block}, nil
+	return &AesECB{
+		key:   key,
+		iv:    []byte(iv),
+		block: block,
+	}, nil
 }
 
 type AesECB struct {
@@ -165,7 +173,7 @@ func (c *AesECB) Encrypt(plaintext []byte) ([]byte, error) {
 func (c *AesECB) Decrypt(ciphertext []byte) ([]byte, error) {
 	size, blockSize := len(ciphertext), c.block.BlockSize()
 	if size%blockSize != 0 {
-		return nil, errorx.Newf("the ciphertext size error: %d/%d", size, blockSize)
+		return nil, errorx.Sprintf("the ciphertext size error: %d/%d", size, blockSize)
 	}
 	var plaintext = make([]byte, size)
 	for i := 0; i < size; i += blockSize {
@@ -185,11 +193,11 @@ func pkcs7Padding(data []byte, blockSize int) []byte {
 func pkcs7UnPadding(data []byte) ([]byte, error) {
 	length := len(data)
 	if length == 0 {
-		return nil, fmt.Errorf("empty data")
+		return nil, errorx.New("empty data")
 	}
 	padding := int(data[length-1])
 	if padding > length || padding == 0 {
-		return nil, fmt.Errorf("invalid padding")
+		return nil, errorx.New("invalid padding")
 	}
 	return data[:length-padding], nil
 }

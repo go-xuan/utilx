@@ -47,7 +47,7 @@ func Apply(name string) Marshal {
 
 func readFile(path string) ([]byte, error) {
 	if !filex.Exists(path) {
-		return nil, errorx.Newf("the file not exist: %s", filex.Pwd(path))
+		return nil, errorx.Sprintf("the file not exist: %s", filex.Pwd(path))
 	} else if data, err := filex.ReadFile(path); err != nil {
 		return nil, errorx.Wrap(err, "read file error")
 	} else {

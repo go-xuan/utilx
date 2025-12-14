@@ -5,6 +5,7 @@ import (
 )
 
 const (
+	STRING   = "string"   // 字符串
 	INT      = "int"      // 数字
 	FLOAT    = "float"    // 浮点数
 	SEQUENCE = "sequence" // 序列

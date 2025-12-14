@@ -16,9 +16,7 @@ func NewConfig(opts ...Option) *Config {
 // defaultConfig 默认配置
 func defaultConfig() *Config {
 	return &Config{
-		Timeout: 10 * time.Second,
-		Crt:     "",
-		Proxy:   "",
+		Timeout: 30 * time.Second,
 	}
 }
 

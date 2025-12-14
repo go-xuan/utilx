@@ -8,21 +8,22 @@ import (
 	"github.com/go-xuan/utilx/errorx"
 )
 
-// SendHttpRequest 发送HTTP请求并返回响应
-func SendHttpRequest(request *http.Request, client ...*http.Client) (*Response, error) {
-	response, err := GetClient(client...).Do(request)
+// DoHttpRequest 发送HTTP请求并返回响应
+func DoHttpRequest(client *http.Client, request *http.Request) (*Response, error) {
+	resp, err := client.Do(request)
 	if err != nil {
-		return nil, errorx.Wrap(err, "do http request error")
+		return nil, errorx.Wrap(err, "http client do error")
 	}
-	defer response.Body.Close()
+	defer errorx.Collect(resp.Body.Close())
+	
 	var body []byte
-	if body, err = io.ReadAll(response.Body); err != nil {
+	if body, err = io.ReadAll(resp.Body); err != nil {
 		return nil, errorx.Wrap(err, "http response body read error")
 	}
 	return &Response{
-		status: response.StatusCode,
+		status: resp.StatusCode,
 		body:   body,
-		header: response.Header,
+		header: resp.Header,
 	}, nil
 }
 

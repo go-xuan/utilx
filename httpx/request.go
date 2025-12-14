@@ -1,18 +1,12 @@
 package httpx
 
 import (
-	"bytes"
-	"encoding/json"
-	"fmt"
 	"io"
-	"mime/multipart"
 	"net/http"
 	"net/url"
-	"strings"
-
-	log "github.com/sirupsen/logrus"
 
 	"github.com/go-xuan/utilx/errorx"
+	log "github.com/sirupsen/logrus"
 )
 
 const (
@@ -24,6 +18,7 @@ const (
 // NewRequest 新建请求
 func NewRequest(method string, url_ string) *Request {
 	return &Request{
+		client:     NewClient(),
 		method:     method,
 		url:        url_,
 		headers:    make(map[string]string),
@@ -44,9 +39,10 @@ type File struct {
 
 // Request 请求器
 type Request struct {
+	client     *http.Client      // http客户端
 	method     string            // 请求方法
-	url        string            // 请求URL
-	trace      string            // 跟踪ID
+	url        string            // 请求url
+	trace      string            // 跟踪id
 	debug      bool              // 是否开启调试模式
 	headers    map[string]string // 请求头
 	cookies    []*http.Cookie    // 请求cookie
@@ -54,6 +50,64 @@ type Request struct {
 	files      []*File           // 请求文件
 	body       any               // 请求体
 	decorators []Decorator       // 请求装饰器
+}
+
+// Send 发送请求
+func (r *Request) Send() (*Response, error) {
+	// 发送请求
+	var resp *http.Response
+	if request, err := r.Build(); err != nil {
+		return nil, errorx.Wrap(err, "new http request error")
+	} else if resp, err = r.client.Do(request); err != nil {
+		return nil, errorx.Wrap(err, "http client do error")
+	}
+	defer errorx.Collect(resp.Body.Close())
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, errorx.Wrap(err, "http response body read error")
+	}
+	// 打印调试信息
+	if r.debug {
+		log.WithField("trace", r.trace).
+			WithField("url", r.url).
+			WithField("body", string(body)).
+			Print("request-debug")
+	}
+	return &Response{
+		trace:  r.trace,
+		status: resp.StatusCode,
+		body:   body,
+		header: resp.Header,
+	}, nil
+}
+
+// Build 创建http请求
+func (r *Request) Build() (*http.Request, error) {
+	// 创建请求
+	var request *http.Request
+	if reader, err := r.getBodyReader(); err != nil {
+		return nil, errorx.Wrap(err, "get body reader error")
+	} else if request, err = http.NewRequest(r.method, r.url, reader); err != nil {
+		return nil, errorx.Wrap(err, "build request error")
+	}
+
+	// 添加请求预设
+	r.decorate(request)
+	// 添加请求头
+	r.setRequestHeaders(request)
+	// 添加cookie
+	r.setRequestCookie(request)
+
+	return request, nil
+}
+
+// SetClient 设置http客户端
+func (r *Request) SetClient(client *http.Client) *Request {
+	if client != nil {
+		r.client = client
+	}
+	return r
 }
 
 // SetMethod 设置请求方法
@@ -84,12 +138,23 @@ func (r *Request) Debug() *Request {
 	return r
 }
 
+// AddParam 添加查询参数
+func (r *Request) AddParam(key, value string) *Request {
+	if parse, err := url.Parse(r.url); err == nil {
+		values := parse.Query()
+		values.Add(key, value)
+		parse.RawQuery = values.Encode()
+		r.url = parse.String()
+	}
+	return r
+}
+
 // AddParams 添加查询参数
 func (r *Request) AddParams(params map[string]string) *Request {
 	if len(params) == 0 {
 		return r
 	}
-	// 解析现有URL查询参数
+	// 解析现有url查询参数
 	parse, err := url.Parse(r.url)
 	if err != nil {
 		return r
@@ -167,67 +232,31 @@ func (r *Request) AddDecorator(decorators ...Decorator) *Request {
 	return r
 }
 
-// NewHttpRequest 创建http请求
-func (r *Request) NewHttpRequest() (*http.Request, error) {
-	body, err := r.getBodyReader()
-	if err != nil {
-		return nil, errorx.Wrap(err, "get body reader error")
-	}
-
-	// 创建请求
-	var request *http.Request
-	if request, err = http.NewRequest(r.method, r.url, body); err != nil {
-		return nil, errorx.Wrap(err, "new request error")
-	}
-
-	// 添加请求预设
-	r.decorate(request)
-	// 添加请求头
-	r.setRequestHeaders(request)
-	// 添加cookie
-	r.setRequestCookie(request)
-
-	return request, nil
-}
-
 // getBodyReader 获取请求体读取器
 func (r *Request) getBodyReader() (io.Reader, error) {
 	if r.body != nil {
-		r.AddHeader(ContentType, ApplicationJSON)
-		b, err := json.Marshal(r.body)
+		reader, contentType, err := GetJsonReader(r.body)
 		if err != nil {
-			return nil, errorx.Wrap(err, "marshal body error")
+			return nil, errorx.Wrap(err, "get form reader error")
 		}
-		return bytes.NewReader(b), nil
-	} else if len(r.form) > 0 {
-		r.AddHeader(ContentType, ApplicationForm)
-		return strings.NewReader(r.form.Encode()), nil
-	} else if len(r.files) > 0 {
-		buffer := &bytes.Buffer{}
-		writer := multipart.NewWriter(buffer)
-
-		for _, file := range r.files {
-			wf, err := writer.CreateFormFile(file.Field, file.Name)
-			if err != nil {
-				return nil, errorx.Wrap(err, "create form file error")
-			}
-			if _, err = wf.Write(file.Data); err != nil {
-				return nil, errorx.Wrap(err, "write form file error")
-			}
-			if file.Params != nil && len(file.Params) > 0 {
-				for k, v := range file.Params {
-					if err = writer.WriteField(k, v); err != nil {
-						return nil, errorx.Wrap(err, fmt.Sprintf("write file params [%s:%s] error", k, v))
-					}
-				}
-			}
+		r.AddHeader(ContentType, contentType)
+		return reader, nil
+	}
+	if len(r.form) > 0 {
+		reader, contentType, err := GetFormReader(r.form)
+		if err != nil {
+			return nil, errorx.Wrap(err, "get form reader error")
 		}
-
-		r.AddHeader(ContentType, writer.FormDataContentType())
-		if err := writer.Close(); err != nil {
-			return nil, errorx.Wrap(err, "close multipart writer error")
+		r.AddHeader(ContentType, contentType)
+		return reader, nil
+	}
+	if len(r.files) > 0 {
+		reader, contentType, err := GetFileReader(r.files)
+		if err != nil {
+			return nil, errorx.Wrap(err, "get form reader error")
 		}
-		return buffer, nil
+		r.AddHeader(ContentType, contentType)
+		return reader, nil
 	}
 	return nil, nil
 }
@@ -257,28 +286,4 @@ func (r *Request) setRequestCookie(request *http.Request) {
 			request.AddCookie(cookie)
 		}
 	}
-}
-
-// Send 发送请求
-func (r *Request) Send(client ...*http.Client) (*Response, error) {
-	// 发送请求
-	var response *Response
-	if request, err := r.NewHttpRequest(); err != nil {
-		return nil, errorx.Wrap(err, "new http request error")
-	} else if response, err = SendHttpRequest(request, client...); err != nil {
-		return response, errorx.Wrap(err, "send http request error")
-	}
-	// 添加trace
-	response.AddTrace(r.trace)
-	// 打印调试信息
-	if r.debug {
-		logger := log.WithField("http_debug", true)
-		if trace := r.trace; trace != "" {
-			logger = logger.WithField("trace", trace)
-		}
-		logger.Printf("http_url: %s", r.url)
-		logger.Printf("http_body: %s", string(response.body))
-	}
-	// 关联trace
-	return response, nil
 }

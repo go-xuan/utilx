@@ -1,6 +1,7 @@
 package stringx
 
 import (
+	"encoding/json"
 	"strconv"
 	"strings"
 	"time"
@@ -64,19 +65,25 @@ func ParseTime(str string, def ...time.Time) time.Time {
 	return time.Time{}
 }
 
-// FormatInt 格式化数字
-func FormatInt(i int) string {
+// Int 转为字符串
+func Int(i int) string {
 	return strconv.Itoa(i)
 }
 
-// FormatInt64 格式化数字
-func FormatInt64(i int64) string {
+// Int64 转为字符串
+func Int64(i int64) string {
 	return strconv.FormatInt(i, 10)
 }
 
-// FormatFloat 格式化浮点数
-func FormatFloat(f float64) string {
+// Float 转为字符串
+func Float(f float64) string {
 	return strconv.FormatFloat(f, 'f', -1, 64)
+}
+
+// Json 转为为json字符串
+func Json(v interface{}) string {
+	data, _ := json.Marshal(v)
+	return string(data)
 }
 
 // Between 获取起始字符首次出现和结尾字符末次出现的下标
@@ -95,24 +102,21 @@ func Between(str, start, end string) (from, to int) {
 	if m > l || n > l {
 		return
 	}
-	var x, y int
+	var x, y int // x：start出现次数，y：end出现次数
 	for i := 0; i < l; i++ {
-		if a[i] == b[0] {
-			if string(a[i:i+m]) == start {
-				if x++; x == 1 {
-					from = i
-				}
-				i = i + m - 1
+		if a[i] == b[0] && string(a[i:i+m]) == start {
+			if x++; x == 1 {
+				from = i
 			}
+			i = i + m - 1
+			continue
 		}
-		if a[i] == c[0] {
-			if string(a[i:i+n]) == end {
-				if y++; y == x || x == 1 {
-					to = i
-					break
-				}
-				i = i + n - 1
+		if x > 0 && a[i] == c[0] && string(a[i:i+n]) == end {
+			if y++; y == x {
+				to = i
+				break
 			}
+			i = i + n - 1
 		}
 	}
 	if to == -1 {
@@ -148,7 +152,13 @@ func Indices(str, sub string, size ...int) []int {
 // position：表示获取位置，默认position=1即正序第1处，position=-1即倒序第1处
 func Index(str, sub string, position ...int) int {
 	a, b := []rune(str), []rune(sub)
-	if l, m := len(a), len(b); l >= m {
+	l, m := len(a), len(b)
+	switch {
+	case m == 0:
+		return 0
+	case m == l && str == sub:
+		return 0
+	case m < l:
 		var x, y = 1, 0
 		if len(position) > 0 {
 			x = position[0]
@@ -172,15 +182,15 @@ func Index(str, sub string, position ...int) int {
 	return -1
 }
 
-// IndexStrict 获取子串下标（严格模式：忽略单词中的子串）
+// IndexStrict 获取子串下标（严格模式：仅当子串是独立单词时才命中）
 func IndexStrict(str, key string) int {
-	l, loop, index := len(key), true, 0
+	length, loop, index := len(key), true, 0
 	for loop {
-		if newIndex := Index(str, key, 1); newIndex >= 0 {
-			if HasAdjacent(str, key, " ", newIndex) {
-				index, loop = index+newIndex, false
+		if i := Index(str, key, 1); i >= 0 {
+			if HasAdjacent(str, key, " ", i) {
+				index, loop = index+i, false
 			} else {
-				index = newIndex + l
+				index = i + length
 				str = str[index:]
 			}
 		} else {
@@ -197,9 +207,8 @@ func HasAdjacent(str, key, adjacent string, index int) bool {
 		return str[kl:kl+al] == adjacent
 	} else if index == sl-kl {
 		return str[index-al:index] == adjacent
-	} else {
-		return str[index-al:index] == adjacent && str[index+kl:index+kl+al] == adjacent
 	}
+	return str[index-al:index] == adjacent && str[index+kl:index+kl+al] == adjacent
 }
 
 // AddPrefix 添加前缀
@@ -227,6 +236,7 @@ func Split(str string, sep string) []string {
 	return slice
 }
 
+// Contains 字符串包含
 func Contains(str string, substr string) bool {
 	return Index(str, substr) >= 0
 }
@@ -234,15 +244,15 @@ func Contains(str string, substr string) bool {
 // ContainsAny 字符串str是否包含keys中的任意值
 func ContainsAny(str string, substr ...string) bool {
 	for _, key := range substr {
-		if Index(str, key) >= 0 {
+		if Contains(str, key) {
 			return true
 		}
 	}
 	return false
 }
 
-// ContainsBoth 字符串str是否包含keys中的所有值
-func ContainsBoth(str string, substr ...string) bool {
+// ContainsAll 字符串str是否包含keys中的所有值
+func ContainsAll(str string, substr ...string) bool {
 	for _, sep := range substr {
 		if Index(str, sep) < 0 {
 			return false
@@ -288,15 +298,15 @@ func Reverse(str string) string {
 
 // SubString 字符串截取
 func SubString(str string, start, end int) string {
-	var r = []rune(str)
+	r := []rune(str)
 	length := len(r)
-	if start < 0 || end > length || start > end {
-		return ""
+	if end > length {
+		end = length
 	}
-	if start == 0 && end == length {
-		return str
+	if length > 0 && start >= 0 && start <= end {
+		return string(r[start:end])
 	}
-	return string(r[start:end])
+	return ""
 }
 
 // Cut 分割字符串（reverse=true从右往左）
@@ -320,26 +330,45 @@ func Insert(str, insert string, position ...int) string {
 
 // Fill 字符填充
 func Fill(str, fill string, length int) string {
-	if l := len(str); length > 0 {
+	l := len(str)
+	if length > 0 {
 		return str + Grow(fill, length-l)
-	} else {
-		return Grow(fill, -length-l) + str
 	}
+	return Grow(fill, -length-l) + str
 }
 
 // Grow 字符扩充到固定长度
 func Grow(str string, length int) string {
-	if l := len(str); length <= 0 || l == 0 {
+	l := len(str)
+	if length <= 0 || l == 0 {
 		return str
 	} else if l == 1 {
 		return strings.Repeat(str, length)
-	} else {
-		var sb strings.Builder
-		for i := 0; i < length; i++ {
-			sb.WriteString(string(str[i%l]))
-		}
-		return sb.String()
 	}
+	var sb strings.Builder
+	for i := 0; i < length; i++ {
+		sb.WriteString(string(str[i%l]))
+	}
+	return sb.String()
+}
+
+// Reduce 字符串缩减（重复子串）
+func Reduce(str string) (string, bool) {
+	if l := len(str); l == 2 { // 长度为2时，仅当两个字符相等时才命中
+		if str[0] == str[1] {
+			return str[:1], true
+		}
+	} else if l > 2 { // 对于长度大于2的字符串，检查所有可能的子串长度
+		for i := 1; i <= l/2; i++ {
+			if l%i == 0 {
+				sub := str[:i]
+				if strings.Repeat(sub, l/i) == str {
+					return sub, true
+				}
+			}
+		}
+	}
+	return str, false
 }
 
 // ParseUrlParams 解析url参数为map
@@ -459,7 +488,7 @@ func MatchUrl(uri, rule string) bool {
 			return Index(uri, `/`) < 0
 		}
 	} else {
-		return Index(uri, rule) >= 0
+		return Contains(uri, rule)
 	}
 	return false
 }

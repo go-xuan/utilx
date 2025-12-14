@@ -1,21 +1,17 @@
 package execx
 
 import (
+	"bytes"
 	"fmt"
 	"testing"
 )
 
 func TestRun(t *testing.T) {
-	stdout, stderr, err := NewCommand("echo $GOPATH").Run()
-	fmt.Println("stdout:", stdout)
-	fmt.Println("stderr:", stderr)
-	fmt.Println(err)
-}
-
-func TestOutputRun(t *testing.T) {
-	cmd := "go_build.sh"
-	err := NewCommand(cmd).Dir("./").OutputRun(func(line string) {
-		fmt.Println(line)
-	})
-	fmt.Println(err)
+	cmd := "curl -o heap-localhost-20251201155636.pprof http://localhost:6060/debug/pprof/heap"
+	var outWriter, errWriter = new(bytes.Buffer), new(bytes.Buffer)
+	if err := NewCommand(cmd).Stdout(outWriter).Stderr(errWriter).Run(); err != nil {
+		t.Error(err)
+	}
+	fmt.Println("stdout:", outWriter.String())
+	fmt.Println("stderr:", errWriter.String())
 }

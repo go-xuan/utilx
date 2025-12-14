@@ -18,15 +18,13 @@ type Base64Encode struct {
 func (c *Base64Encode) Encode(plaintext []byte) string {
 	if c.safe {
 		return base64.URLEncoding.EncodeToString(plaintext)
-	} else {
-		return base64.StdEncoding.EncodeToString(plaintext)
 	}
+	return base64.StdEncoding.EncodeToString(plaintext)
 }
 
 func (c *Base64Encode) Decode(ciphertext string) ([]byte, error) {
 	if c.safe {
 		return base64.URLEncoding.DecodeString(ciphertext)
-	} else {
-		return base64.StdEncoding.DecodeString(ciphertext)
 	}
+	return base64.StdEncoding.DecodeString(ciphertext)
 }

@@ -7,21 +7,27 @@ import (
 )
 
 func TestError(t *testing.T) {
-	if err := f4(1); err != nil {
-		fmt.Println(err)
-	}
-	if err := f4(2); err != nil {
-		fmt.Println(err)
-	}
-	if err := f4(3); err != nil {
-		fmt.Println(err)
-	}
-	if err := f4(4); err != nil {
-		fmt.Println(err)
-	}
+	fmt.Println(newError(1))
+	fmt.Println(newError(2))
+	fmt.Println(newError(3))
+	fmt.Println(newError(4))
+	fmt.Println(newError(5))
+
+	fmt.Print("-----------------\n\n\n")
+	err := newError(2)
+	fmt.Println(noWarp(noWarp(err)))
+	fmt.Println(fmtWarp(fmtWarp(err)))
+	fmt.Println(doWrap(doWrap(err)))
+
+	fmt.Print("-----------------\n\n\n")
+	err = newError(1)
+	fmt.Println(noWarp(noWarp(err)))
+	fmt.Println(fmtWarp(fmtWarp(err)))
+	fmt.Println(doWrap(doWrap(err)))
+
 }
 
-func f1(e int) error {
+func newError(e int) error {
 	switch e {
 	case 1:
 		return New("携带栈信息的error")
@@ -31,28 +37,21 @@ func f1(e int) error {
 		return fmt.Errorf("fmt.Errorf")
 	case 4:
 		return fmt.Errorf("fmt.Errorf ==> %w", errors.New("普通error"))
+	case 5:
+		return Wrap(errors.New("普通error"), "doWrap error")
 	default:
 		return nil
 	}
 }
 
-func f2(e int) error {
-	if err := f1(e); err != nil {
-		return err
-	}
-	return nil
+func noWarp(err error) error {
+	return err
 }
 
-func f3(e int) error {
-	if err := f2(e); err != nil {
-		return err
-	}
-	return nil
+func fmtWarp(err error) error {
+	return fmt.Errorf("fmt Errorf %w", err)
 }
 
-func f4(e int) error {
-	if err := f3(e); err != nil {
-		return err
-	}
-	return nil
+func doWrap(err error) error {
+	return Wrap(err, "do wrap error")
 }

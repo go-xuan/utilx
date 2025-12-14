@@ -49,7 +49,7 @@ type Flake struct {
 	TimeStamp int64 // 时间戳
 }
 
-func (s *Flake) Int64() int64 {
+func (s *Flake) Value() int64 {
 	s.Lock()
 	defer s.Unlock()
 	now := time.Now().UnixNano() / 1e6
@@ -68,5 +68,5 @@ func (s *Flake) Int64() int64 {
 }
 
 func (s *Flake) String() string {
-	return stringx.FormatInt64(s.Int64())
+	return stringx.Int64(s.Value())
 }

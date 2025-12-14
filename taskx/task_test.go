@@ -8,7 +8,19 @@ import (
 	"time"
 
 	"github.com/go-xuan/utilx/errorx"
+	"github.com/go-xuan/utilx/funcx"
 )
+
+func function(id int, ratio float64) funcx.X {
+	return func(ctx context.Context) error {
+		value := rand.New(rand.NewSource(time.Now().UnixNano())).Intn(100)
+		threshold := int(ratio * 100)
+		if value <= threshold {
+			return nil
+		}
+		return errorx.Sprintf("error: id=%d, value=%d，threshold=%d", id, value, threshold)
+	}
+}
 
 type testTask struct {
 	id    int     // ID
@@ -20,12 +32,7 @@ func (t testTask) GetID() string {
 }
 
 func (t testTask) Execute(ctx context.Context) error {
-	value := rand.New(rand.NewSource(time.Now().UnixNano())).Intn(100)
-	threshold := int(t.ratio * 100)
-	if value <= threshold {
-		return nil
-	}
-	return errorx.Newf("error: id=%d, value=%d，threshold=%d", t.id, value, threshold)
+	return function(t.id, t.ratio)(ctx)
 }
 
 func TestTask(t *testing.T) {

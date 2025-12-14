@@ -10,14 +10,6 @@ import (
 	"time"
 )
 
-// GetClient 获取http客户端
-func GetClient(client ...*http.Client) *http.Client {
-	if len(client) > 0 {
-		return client[0]
-	}
-	return NewClient()
-}
-
 // NewClient 新建http客户端
 func NewClient(opts ...Option) *http.Client {
 	cfg := NewConfig(opts...)

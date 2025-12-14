@@ -9,7 +9,7 @@ import (
 
 // New 创建error
 func New(v any) error {
-	var err = &Error{stack: getStack()}
+	err := &Error{stack: getStack()}
 	switch e := v.(type) {
 	case error:
 		err.source = e
@@ -22,8 +22,8 @@ func New(v any) error {
 	return err
 }
 
-// Newf 格式化创建error
-func Newf(format string, a ...interface{}) error {
+// Sprintf 格式化创建error
+func Sprintf(format string, a ...interface{}) error {
 	return &Error{
 		msg:   fmt.Sprintf(format, a...),
 		stack: getStack(),
@@ -32,7 +32,7 @@ func Newf(format string, a ...interface{}) error {
 
 // Wrap 包装error
 func Wrap(v any, msg string) error {
-	var err = &Error{msg: msg}
+	err := &Error{msg: msg}
 	switch e := v.(type) {
 	case *Error:
 		err.source = e
@@ -49,13 +49,12 @@ func Wrap(v any, msg string) error {
 
 // Unwrap 解包装
 func Unwrap(err error) error {
-	if t, ok := err.(interface {
+	if in, ok := err.(interface {
 		Unwrap() error
 	}); ok {
-		return t.Unwrap()
-	} else {
-		return nil
+		return in.Unwrap()
 	}
+	return nil
 }
 
 // Panic 恐慌
@@ -89,10 +88,10 @@ func (err *Error) Unwrap() error { return err.source }
 // Format fmt打印实现
 func (err *Error) Format(s fmt.State, verb rune) {
 	switch verb {
-	case 'v':
+	case 118: // verb == 'v'
 		_, _ = io.WriteString(s, err.Error())
 		err.stack.Format(s, verb)
-	case 's':
+	default:
 		_, _ = io.WriteString(s, err.Error())
 	}
 }
@@ -112,7 +111,7 @@ type stack []uintptr
 
 // Format 打印调用栈信息（fmt实现）
 func (s *stack) Format(f fmt.State, verb rune) {
-	if verb == 'v' {
+	if verb == 118 { // verb == 'v'
 		i, frames := 1, runtime.CallersFrames(*s)
 		for {
 			if pc, more := frames.Next(); more && i <= 5 {

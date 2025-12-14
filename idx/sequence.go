@@ -32,20 +32,18 @@ func (m *SequencePool) Create(name string, start, incr int64) {
 func (m *SequencePool) CurrVal(name string) int64 {
 	if sequence := m.Pool.Get(name); sequence != nil {
 		return sequence.Curr()
-	} else {
-		m.Create(name, 0, 1)
-		return 0
 	}
+	m.Create(name, 0, 1)
+	return 0
 }
 
 // NextVal 获取序列下一个值
 func (m *SequencePool) NextVal(name string) int64 {
 	if sequence := m.Pool.Get(name); sequence != nil {
 		return sequence.Next()
-	} else {
-		m.Create(name, 1, 1)
-		return 1
 	}
+	m.Create(name, 1, 1)
+	return 1
 }
 
 // NextBatch 获取序列当前值
@@ -54,28 +52,27 @@ func (m *SequencePool) NextBatch(name string, size int64) int64 {
 		var next = sequence.Next()
 		sequence.Set(next + (size-1)*sequence.incr)
 		return next
-	} else {
-		m.Create(name, size+1, 1)
-		return 1
 	}
+	m.Create(name, size+1, 1)
+	return 1
 }
 
 // Set 设置序列当前值
 func (m *SequencePool) Set(name string, value int64) {
 	if sequence := m.Pool.Get(name); sequence != nil {
 		sequence.Set(value)
-	} else {
-		m.Create(name, value, 1)
+		return
 	}
+	m.Create(name, value, 1)
 }
 
 // Reset 序列重置
 func (m *SequencePool) Reset(name string) {
 	if sequence := m.Pool.Get(name); sequence != nil {
 		sequence.Reset()
-	} else {
-		m.Create(name, 0, 1)
+		return
 	}
+	m.Create(name, 0, 1)
 }
 
 // NewSequence 新建序列
@@ -119,9 +116,9 @@ func (s *Sequence) Set(v int64) {
 	defer s.Unlock()
 	if v < s.start {
 		s.val = s.start
-	} else {
-		s.val = v
+		return
 	}
+	s.val = v
 }
 
 // Reset 序列重置
