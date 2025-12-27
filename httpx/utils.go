@@ -6,11 +6,11 @@ import (
 	"fmt"
 	"io"
 	"mime/multipart"
-	"net/http"
 	"net/url"
 	"strings"
 
 	"github.com/go-xuan/utilx/errorx"
+	"github.com/go-xuan/utilx/filex"
 	"github.com/go-xuan/utilx/stringx"
 )
 
@@ -19,8 +19,8 @@ const (
 	HTTPS = "https" // https协议
 )
 
-// GetJsonReader 获取json读取器
-func GetJsonReader(body any) (io.Reader, string, error) {
+// NewJsonReader 获取json读取器
+func NewJsonReader(body any) (io.Reader, string, error) {
 	b, err := json.Marshal(body)
 	if err != nil {
 		return nil, "", errorx.Wrap(err, "json marshal error")
@@ -28,13 +28,13 @@ func GetJsonReader(body any) (io.Reader, string, error) {
 	return bytes.NewReader(b), ApplicationJSON, nil
 }
 
-// GetFormReader 获取表单读取器
-func GetFormReader(form url.Values) (io.Reader, string, error) {
+// NewFormReader 获取表单读取器
+func NewFormReader(form url.Values) (io.Reader, string, error) {
 	return strings.NewReader(form.Encode()), ApplicationForm, nil
 }
 
-// GetFileReader 获取文件读取器
-func GetFileReader(files []*File) (io.Reader, string, error) {
+// NewFileReader 获取文件读取器
+func NewFileReader(files []*File) (io.Reader, string, error) {
 	reader := &bytes.Buffer{}
 	writer := multipart.NewWriter(reader)
 	for _, file := range files {
@@ -103,15 +103,25 @@ func ParseHost(host_ string) (string, string, int) {
 
 // DownloadFile 下载文件
 func DownloadFile(url string) ([]byte, error) {
-	resp, err := http.DefaultClient.Get(url)
+	resp, err := NewClient().Get(url)
 	if err != nil {
-		return nil, err
+		return nil, errorx.Wrap(err, "http request error")
 	}
 	defer errorx.Close(resp.Body)
 
-	var body []byte
-	if body, err = io.ReadAll(resp.Body); err != nil {
-		return nil, err
+	var data []byte
+	if data, err = io.ReadAll(resp.Body); err != nil {
+		return nil, errorx.Wrap(err, "read response body error")
 	}
-	return body, nil
+	return data, nil
+}
+
+// DownloadFileTo 下载文件到指定路径
+func DownloadFileTo(url string, path string) error {
+	if data, err := DownloadFile(url); err != nil {
+		return errorx.Wrap(err, "download file error")
+	} else if err = filex.WriteFile(path, data); err != nil {
+		return errorx.Wrap(err, "write file error")
+	}
+	return nil
 }

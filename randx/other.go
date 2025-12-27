@@ -38,11 +38,11 @@ func Date() string {
 
 // TimeRange 随机时间
 func TimeRange(min, max time.Time) time.Time {
-	if maxNano, minNano := max.UnixNano(), min.UnixNano(); maxNano > minNano {
-		return time.Unix(0, Int64Range(minNano, maxNano))
-	} else {
-		return time.Unix(0, Int64Range(maxNano, minNano))
+	m, n := max.UnixNano(), min.UnixNano()
+	if m > n {
+		m, n = n, m
 	}
+	return time.Unix(0, Int64Range(m, n))
 }
 
 // DateRange 随机时间

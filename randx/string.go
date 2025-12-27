@@ -11,10 +11,11 @@ func String(length ...int) string {
 	if len(length) > 0 && length[0] > 0 {
 		l = length[0]
 	}
-	return string(buildRunes(l, []rune(allChar)))
+	return string(newRunes(l, []rune(allChar)))
 }
 
-func buildRunes(length int, pool []rune) []rune {
+// 生成随机字符
+func newRunes(length int, pool []rune) []rune {
 	runes, l := make([]rune, length), len(pool)
 	for i := 0; i < length; i++ {
 		index := IntRange(0, l-1)
@@ -61,7 +62,7 @@ func StringWithOption(length int, opt Option) string {
 		pool += special
 	}
 
-	runes := buildRunes(length, []rune(pool))
+	runes := newRunes(length, []rune(pool))
 	for i := range runes {
 		j := NewRand().Intn(i + 1)
 		runes[i], runes[j] = runes[j], runes[i]

@@ -24,7 +24,7 @@ func TestWriteFile(t *testing.T) {
 		fmt.Println(err)
 	}
 
-	if err := WriteFile(path, []byte(data), Append); err != nil {
+	if err := WriteFile(path, []byte("data"), Append); err != nil {
 		fmt.Println(err)
 	}
 }

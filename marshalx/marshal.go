@@ -45,12 +45,14 @@ func Apply(name string) Marshal {
 	}
 }
 
+// readFile 读取文件内容
 func readFile(path string) ([]byte, error) {
 	if !filex.Exists(path) {
 		return nil, errorx.Sprintf("the file not exist: %s", filex.Pwd(path))
-	} else if data, err := filex.ReadFile(path); err != nil {
-		return nil, errorx.Wrap(err, "read file error")
-	} else {
-		return data, nil
 	}
+	data, err := filex.ReadFile(path)
+	if err != nil {
+		return nil, errorx.Wrap(err, "read file error")
+	}
+	return data, nil
 }

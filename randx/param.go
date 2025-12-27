@@ -11,21 +11,22 @@ import (
 )
 
 func NewParam(data map[string]string) *Param {
-	return &Param{
-		Min:    data["min"],
-		Max:    data["max"],
-		Prefix: data["prefix"],
-		Suffix: data["suffix"],
-		Upper:  data["upper"] == "true",
-		Lower:  data["lower"] == "true",
-		Old:    data["old"],
-		New:    data["new"],
-		Format: data["format"],
-		Length: stringx.ParseInt(data["length"]),
-		Prec:   stringx.ParseInt(data["prec"]),
-		Level:  stringx.ParseInt(data["level"]),
-		Enums:  strings.Split(data["enums"], ","),
+	param := &Param{}
+	if data != nil {
+		param.Min = data["min"]
+		param.Max = data["max"]
+		param.Prefix = data["prefix"]
+		param.Suffix = data["suffix"]
+		param.Upper = data["upper"] == "true"
+		param.Lower = data["lower"] == "true"
+		param.Old = data["old"]
+		param.New = data["new"]
+		param.Length = stringx.ParseInt(data["length"])
+		param.Prec = stringx.ParseInt(data["prec"])
+		param.Level = stringx.ParseInt(data["level"])
+		param.Enums = strings.Split(data["enums"], ",")
 	}
+	return param
 }
 
 // Param 随机数生成参数
@@ -38,7 +39,6 @@ type Param struct {
 	Lower  bool     // 转小写
 	Old    string   // 替换旧字符
 	New    string   // 替换新字符
-	Format string   // 时间格式
 	Length int      // 长度
 	Prec   int      // 小数位精度
 	Level  int      // 级别
@@ -46,16 +46,16 @@ type Param struct {
 }
 
 // 字符串
-func (p *Param) String(t string) string {
-	switch t {
+func (p *Param) String(type_ string) string {
+	switch type_ {
 	case INT:
 		return strconv.Itoa(p.Int())
 	case FLOAT:
 		return strconv.FormatFloat(p.Float(), 'f', -1, 64)
 	case TIME:
-		return p.TimeFmt()
+		return timex.Format(p.Time())
 	case DATE:
-		return p.TimeFmt(timex.DateFmt)
+		return timex.Format(p.Time(), timex.DateFmt)
 	case UUID:
 		return uuid.NewString()
 	case PHONE:
@@ -86,11 +86,10 @@ func (p *Param) Int() int {
 func (p *Param) Float() float64 {
 	min_ := stringx.ParseFloat(p.Min, 1)
 	max_ := stringx.ParseFloat(p.Max, 999)
-	prec := p.Prec
-	if prec == 0 {
-		prec = 6
+	if p.Prec == 0 {
+		p.Prec = 6
 	}
-	return Float64Range(min_, max_, prec)
+	return Float64Range(min_, max_, p.Prec)
 }
 
 // Time 时间
@@ -98,19 +97,6 @@ func (p *Param) Time() time.Time {
 	start := stringx.ParseTime(p.Min, time.Time{})
 	end := stringx.ParseTime(p.Max, time.Now())
 	return TimeRange(start, end)
-}
-
-// TimeFmt 时间字符串
-func (p *Param) TimeFmt(format ...string) string {
-	start := stringx.ParseTime(p.Min, time.Time{})
-	end := stringx.ParseTime(p.Max, time.Now())
-	var layout = timex.TimeFmt
-	if len(format) > 0 {
-		layout = format[0]
-	} else if p.Format != "" {
-		layout = p.Format
-	}
-	return TimeRange(start, end).Format(layout)
 }
 
 // Enum 枚举值

@@ -15,17 +15,17 @@ const (
 	ApplicationForm = "application/x-www-form-urlencoded"
 )
 
+// Get 发送GET请求
+func Get(url string) (*Response, error) {
+	return NewRequest(http.MethodGet, url).Send()
+}
+
 // NewRequest 新建请求
 func NewRequest(method string, url_ string) *Request {
 	return &Request{
-		client:     NewClient(),
-		method:     method,
-		url:        url_,
-		headers:    make(map[string]string),
-		cookies:    make([]*http.Cookie, 0),
-		form:       make(url.Values),
-		files:      make([]*File, 0),
-		decorators: make([]Decorator, 0),
+		client: NewClient(),
+		method: method,
+		url:    url_,
 	}
 }
 
@@ -58,7 +58,7 @@ func (r *Request) Send() (*Response, error) {
 	var resp *http.Response
 	if request, err := r.Build(); err != nil {
 		return nil, errorx.Wrap(err, "new http request error")
-	} else if resp, err = r.client.Do(request); err != nil {
+	} else if resp, err = r.GetClient().Do(request); err != nil {
 		return nil, errorx.Wrap(err, "http client do error")
 	}
 	defer errorx.Close(resp.Body)
@@ -100,6 +100,14 @@ func (r *Request) Build() (*http.Request, error) {
 	r.setRequestCookie(request)
 
 	return request, nil
+}
+
+// GetClient 获取http客户端
+func (r *Request) GetClient() *http.Client {
+	if r.client == nil {
+		r.client = NewClient()
+	}
+	return r.client
 }
 
 // SetClient 设置http客户端
@@ -170,13 +178,18 @@ func (r *Request) AddParams(params map[string]string) *Request {
 
 // AddBody 添加请求体
 func (r *Request) AddBody(body any) *Request {
-	r.body = body
+	if body != nil {
+		r.body = body
+	}
 	return r
 }
 
 // AddForm 添加请求表单参数
 func (r *Request) AddForm(form url.Values) *Request {
 	if len(form) > 0 {
+		if r.form == nil {
+			r.form = make(url.Values)
+		}
 		for key, vals := range form {
 			for _, val := range vals {
 				r.form.Add(key, val)
@@ -189,6 +202,9 @@ func (r *Request) AddForm(form url.Values) *Request {
 // AddFile 添加请求文件
 func (r *Request) AddFile(file *File) *Request {
 	if file != nil {
+		if r.files == nil {
+			r.files = make([]*File, 0)
+		}
 		r.files = append(r.files, file)
 	}
 	return r
@@ -197,6 +213,9 @@ func (r *Request) AddFile(file *File) *Request {
 // AddHeader 添加请求头
 func (r *Request) AddHeader(key, value string) *Request {
 	if key != "" && value != "" {
+		if r.headers == nil {
+			r.headers = make(map[string]string)
+		}
 		r.headers[key] = value
 	}
 	return r
@@ -204,8 +223,10 @@ func (r *Request) AddHeader(key, value string) *Request {
 
 // AddHeaders 添加请求头
 func (r *Request) AddHeaders(headers map[string]string) *Request {
-	for k, v := range headers {
-		r.AddHeader(k, v)
+	if len(headers) > 0 {
+		for k, v := range headers {
+			r.AddHeader(k, v)
+		}
 	}
 	return r
 }
@@ -213,6 +234,9 @@ func (r *Request) AddHeaders(headers map[string]string) *Request {
 // AddCookie 添加请求cookie
 func (r *Request) AddCookie(cookie *http.Cookie) *Request {
 	if cookie != nil {
+		if r.cookies == nil {
+			r.cookies = make([]*http.Cookie, 0)
+		}
 		r.cookies = append(r.cookies, cookie)
 	}
 	return r
@@ -221,6 +245,9 @@ func (r *Request) AddCookie(cookie *http.Cookie) *Request {
 // AddCookies 添加请求cookie
 func (r *Request) AddCookies(cookies []*http.Cookie) *Request {
 	if len(cookies) > 0 {
+		if r.cookies == nil {
+			r.cookies = make([]*http.Cookie, 0)
+		}
 		r.cookies = append(r.cookies, cookies...)
 	}
 	return r
@@ -228,14 +255,19 @@ func (r *Request) AddCookies(cookies []*http.Cookie) *Request {
 
 // AddDecorator 添加请求装饰器
 func (r *Request) AddDecorator(decorators ...Decorator) *Request {
-	r.decorators = append(r.decorators, decorators...)
+	if len(decorators) > 0 {
+		if r.decorators == nil {
+			r.decorators = make([]Decorator, 0)
+		}
+		r.decorators = append(r.decorators, decorators...)
+	}
 	return r
 }
 
 // getBodyReader 获取请求体读取器
 func (r *Request) getBodyReader() (io.Reader, error) {
 	if r.body != nil {
-		reader, contentType, err := GetJsonReader(r.body)
+		reader, contentType, err := NewJsonReader(r.body)
 		if err != nil {
 			return nil, errorx.Wrap(err, "get form reader error")
 		}
@@ -243,7 +275,7 @@ func (r *Request) getBodyReader() (io.Reader, error) {
 		return reader, nil
 	}
 	if len(r.form) > 0 {
-		reader, contentType, err := GetFormReader(r.form)
+		reader, contentType, err := NewFormReader(r.form)
 		if err != nil {
 			return nil, errorx.Wrap(err, "get form reader error")
 		}
@@ -251,7 +283,7 @@ func (r *Request) getBodyReader() (io.Reader, error) {
 		return reader, nil
 	}
 	if len(r.files) > 0 {
-		reader, contentType, err := GetFileReader(r.files)
+		reader, contentType, err := NewFileReader(r.files)
 		if err != nil {
 			return nil, errorx.Wrap(err, "get form reader error")
 		}

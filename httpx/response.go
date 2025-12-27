@@ -2,17 +2,18 @@ package httpx
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 
 	"github.com/go-xuan/utilx/errorx"
 )
 
-// DoHttpRequest 发送HTTP请求并返回响应
-func DoHttpRequest(client *http.Client, request *http.Request) (*Response, error) {
+// HttpRequest 发送HTTP请求并返回响应
+func HttpRequest(client *http.Client, request *http.Request) (*Response, error) {
 	resp, err := client.Do(request)
 	if err != nil {
-		return nil, errorx.Wrap(err, "http client do error")
+		return nil, errorx.Wrap(err, "http client do request error")
 	}
 	defer errorx.Close(resp.Body)
 
@@ -78,12 +79,33 @@ func (r *Response) StatusMatch(status ...int) bool {
 // Unmarshal 将响应体解析到指定的结构体中
 func (r *Response) Unmarshal(v any) error {
 	if v != nil {
-		if len(r.body) == 0 {
-			return errorx.New("response body is empty, cannot unmarshal")
-		}
-		if err := json.Unmarshal(r.body, v); err != nil {
-			return errorx.Wrap(err, "response body unmarshal error")
-		}
+		return nil
+	}
+	if len(r.body) == 0 {
+		return errorx.New("response body is empty")
+	}
+	if err := json.Unmarshal(r.body, v); err != nil {
+		return errorx.Wrap(err, "response body unmarshal error")
+	}
+	return nil
+}
+
+// UnmarshalField 将响应体解析到指定的结构体中
+func (r *Response) UnmarshalField(field string, v any) error {
+	if v == nil {
+		return nil
+	}
+	if len(r.body) == 0 {
+		return errorx.New("response body is empty")
+	}
+	result := make(map[string]json.RawMessage)
+	if err := json.Unmarshal(r.body, &result); err != nil {
+		return errorx.Wrap(err, "response body unmarshal error")
+	}
+	if data, ok := result[field]; !ok {
+		return errorx.Sprintf("field %s not found", field)
+	} else if err := json.Unmarshal(data, v); err != nil {
+		return errorx.Wrap(err, fmt.Sprintf("field %s unmarshal error", field))
 	}
 	return nil
 }

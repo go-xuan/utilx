@@ -1,15 +1,15 @@
 package marshalx
 
 import (
+	"bytes"
 	"fmt"
 	"reflect"
-	"strings"
 
 	"github.com/magiconair/properties"
 
-	"github.com/go-xuan/utilx/anyx"
 	"github.com/go-xuan/utilx/errorx"
 	"github.com/go-xuan/utilx/filex"
+	"github.com/go-xuan/utilx/reflectx"
 )
 
 func Properties() Marshal {
@@ -23,28 +23,30 @@ func (p propertiesImpl) Name() string {
 }
 
 func (p propertiesImpl) Marshal(v interface{}) ([]byte, error) {
-	var lines []string
+	var b bytes.Buffer
 	val := reflect.ValueOf(v)
+	typ := val.Type()
 	for i := 0; i < val.NumField(); i++ {
-		key := val.Type().Field(i).Tag.Get("properties")
-		value := val.Field(i).String()
-		lines = append(lines, fmt.Sprintf("%s=%s", key, value))
+		key := typ.Field(i).Tag.Get("properties")
+		value := val.Field(i).Interface()
+		b.WriteString(fmt.Sprintf("%s=%v\n", key, value))
 	}
-	return []byte(strings.Join(lines, "\n")), nil
+	return b.Bytes(), nil
 }
 
 func (p propertiesImpl) Unmarshal(data []byte, v interface{}) error {
-	if err := anyx.MustStructPointer(v); err != nil {
+	if !reflectx.IsStructPointer(v) {
 		return errorx.New("the kind must be struct pointer")
 	}
-	pp, err := properties.Load(data, properties.UTF8)
+	pro, err := properties.Load(data, properties.UTF8)
 	if err != nil {
 		return errorx.Wrap(err, "load properties error")
 	}
-	propertiesSetStructValue(pp, reflect.ValueOf(v).Elem())
+	propertiesSetStructValue(pro, reflect.ValueOf(v).Elem())
 	return nil
 }
 
+// Read 读取properties文件
 func (p propertiesImpl) Read(path string, v interface{}) error {
 	data, err := readFile(path)
 	if err != nil {
@@ -53,6 +55,7 @@ func (p propertiesImpl) Read(path string, v interface{}) error {
 	return p.Unmarshal(data, v)
 }
 
+// Write 写入properties文件
 func (p propertiesImpl) Write(path string, v interface{}) error {
 	if data, err := p.Marshal(v); err != nil {
 		return errorx.Wrap(err, "properties marshal error")

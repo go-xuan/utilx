@@ -5,7 +5,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/go-xuan/utilx/anyx"
 	"github.com/go-xuan/utilx/stringx"
 )
 
@@ -27,26 +26,42 @@ const (
 
 var flake *Flake
 
+// SnowFlake 雪花ID生成器
 func SnowFlake(id ...int64) *Flake {
-	workerId := anyx.Default(1, id...)
+	workerId := getWorkerId(id...)
 	if flake == nil || flake.WorkerId != workerId {
 		flake = newSnowflake(workerId)
 	}
 	return flake
 }
 
-func newSnowflake(workerId int64) *Flake {
-	if workerId < 0 || workerId > workerMax {
-		workerId = int64(math.Abs(float64(workerId % workerMax)))
+// 获取机器号
+func getWorkerId(worker ...int64) int64 {
+	if len(worker) > 0 && worker[0] != 0 {
+		id := worker[0]
+		if id < 0 || id > workerMax {
+			return int64(math.Abs(float64(id % workerMax)))
+		}
+		return id
 	}
-	return &Flake{Mutex: new(sync.Mutex), WorkerId: workerId, TimeStamp: 0, Sequence: 0}
+	return 1
+}
+
+// newSnowflake 创建新的雪花ID生成器
+func newSnowflake(workerId int64) *Flake {
+	return &Flake{
+		Mutex:     new(sync.Mutex),
+		WorkerId:  workerId,
+		TimeStamp: 0,
+		Sequence:  0,
+	}
 }
 
 type Flake struct {
-	*sync.Mutex
-	WorkerId  int64 // 机器号,0~1023
-	Sequence  int64 // 序列号
-	TimeStamp int64 // 时间戳
+	*sync.Mutex       // 互斥锁
+	WorkerId    int64 // 机器号,0~1023
+	Sequence    int64 // 序列号
+	TimeStamp   int64 // 时间戳
 }
 
 func (s *Flake) Value() int64 {

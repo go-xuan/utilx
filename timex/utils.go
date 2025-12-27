@@ -13,22 +13,23 @@ const (
 )
 
 const (
-	Nano Unit = iota
-	Micro
-	Milli
-	Second
-	Minute
-	Hour
-	Day
-	Week
-	Month
-	Year
+	Nano   Unit = iota // 纳秒
+	Micro              // 微秒
+	Milli              // 毫秒
+	Second             // 秒
+	Minute             // 分
+	Hour               // 时
+	Day                // 天
+	Week               // 周
+	WeekCN             // 周
+	Month              // 月
+	Year               // 年
 )
 
 // Format 时间格式化
 func Format(time time.Time, format ...string) string {
-	var layout = TimeFmt
-	if len(format) > 0 {
+	layout := TimeFmt
+	if len(format) > 0 && format[0] != "" {
 		layout = format[0]
 	}
 	return time.Format(layout)
@@ -37,11 +38,11 @@ func Format(time time.Time, format ...string) string {
 // Parse 时间字符串解析
 func Parse(timeStr string, format ...string) time.Time {
 	layout := TimeFmt
-	if len(format) > 0 {
+	if len(format) > 0 && format[0] != "" {
 		layout = format[0]
 	}
-	if location, err := time.ParseInLocation(layout, timeStr, time.Local); err == nil {
-		return location
+	if parse, err := time.Parse(layout, timeStr); err == nil {
+		return parse
 	}
 	return time.Time{}
 }
@@ -49,11 +50,12 @@ func Parse(timeStr string, format ...string) time.Time {
 // ParseDateOrTime 解析时间字符串
 func ParseDateOrTime(timeStr string) time.Time {
 	if len(timeStr) == 10 && timeStr[4:5] == "-" {
-		if location, err := time.ParseInLocation(DateFmt, timeStr, time.Local); err == nil {
-			return location
+		if parse, err := time.Parse(DateFmt, timeStr); err == nil {
+			return parse
 		}
-	} else if location, err := time.ParseInLocation(TimeFmt, timeStr, time.Local); err == nil {
-		return location
+	}
+	if parse, err := time.Parse(TimeFmt, timeStr); err == nil {
+		return parse
 	}
 	return time.Time{}
 }
@@ -131,7 +133,6 @@ func WeekdayCn(t time.Time) string {
 	default:
 		return t.Weekday().String()
 	}
-
 }
 
 // TimeDiff 间隔时间
@@ -141,6 +142,8 @@ func TimeDiff(start, end time.Time, unit Unit) int64 {
 		return int64(YearInterval(start, end))
 	case Month:
 		return int64(MonthInterval(start, end))
+	case Week:
+		return (end.Unix() - start.Unix()) / 604800
 	case Day:
 		return (end.Unix() - start.Unix()) / 86400
 	case Hour:
@@ -194,21 +197,69 @@ func TimeSlice(start, end time.Time, unit Unit) []string {
 	return slice
 }
 
-// TimeRange 获取特定范围内起止时间(当天/本周/本月/本年)
-func TimeRange(t time.Time, unit Unit) (start, end time.Time) {
+// Add 时间加减
+func Add(t time.Time, unit Unit, v int) time.Time {
 	switch unit {
-	case Year:
-		start = DateStart(t.AddDate(0, 0, -t.YearDay()+1))
-		end = start.AddDate(1, 0, 0).Add(-time.Second)
+	case Second:
+		return t.Add(time.Second * time.Duration(v))
+	case Minute:
+		return t.Add(time.Minute * time.Duration(v))
+	case Hour:
+		return t.Add(time.Hour * time.Duration(v))
+	case Day:
+		return t.AddDate(0, 0, v)
+	case Week, WeekCN:
+		return t.AddDate(0, 0, v*7)
 	case Month:
-		start = DateStart(t.AddDate(0, 0, -t.Day()+1))
-		end = start.AddDate(0, 1, 0).Add(-time.Second)
-	case Week:
-		start = DateStart(t.AddDate(0, 0, int(time.Monday-t.Weekday())))
-		end = start.AddDate(0, 0, 7).Add(-time.Second)
+		return t.AddDate(0, v, 0)
+	case Year:
+		return t.AddDate(v, 0, 0)
 	default:
-		start = DateStart(t)
-		end = start.AddDate(0, 0, 1).Add(-time.Second)
+		return t
 	}
-	return
+}
+
+// TimeRange 获取特定范围内起止时间(当天/本周/本月/本年)
+func TimeRange(t time.Time, unit Unit, v int) (time.Time, time.Time) {
+	var start, end time.Time
+	switch unit {
+	case Second:
+		start = t.Truncate(time.Second)
+		start = Add(start, unit, v)
+		end = start.Add(time.Second)
+	case Minute:
+		start = t.Truncate(time.Minute)
+		start = Add(start, unit, v)
+		end = start.Add(time.Minute)
+	case Hour:
+		start = t.Truncate(time.Hour)
+		start = Add(start, unit, v)
+		end = start.Add(time.Hour)
+	case Day:
+		y, m, d := t.Date()
+		start = time.Date(y, m, d, 0, 0, 0, 0, time.Local)
+		start = Add(start, unit, v)
+		end = start.AddDate(0, 0, 1)
+	case Week:
+		y, m, d := t.AddDate(0, 0, -int(t.Weekday())).Date()
+		start = time.Date(y, m, d, 0, 0, 0, 0, time.Local)
+		start = Add(start, unit, v)
+		end = start.AddDate(0, 0, 7)
+	case WeekCN:
+		y, m, d := t.AddDate(0, 0, int(1-t.Weekday())).Date()
+		start = time.Date(y, m, d, 0, 0, 0, 0, time.Local)
+		start = Add(start, unit, v)
+		end = start.AddDate(0, 0, 7)
+	case Month:
+		y, m, _ := t.Date()
+		start = time.Date(y, m, 1, 0, 0, 0, 0, time.Local)
+		start = Add(start, unit, v)
+		end = start.AddDate(0, 1, 0)
+	case Year:
+		start = time.Date(t.Year(), 1, 1, 0, 0, 0, 0, time.Local)
+		start = Add(start, unit, v)
+		end = start.AddDate(1, 0, 0)
+	default:
+	}
+	return start, end
 }

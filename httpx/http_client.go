@@ -12,11 +12,13 @@ import (
 
 // NewClient 新建http客户端
 func NewClient(opts ...Option) *http.Client {
-	cfg := NewConfig(opts...)
 	client := http.DefaultClient
-	httpClientSetTimeout(client, cfg.Timeout)
-	httpClientSetCrt(client, cfg.Crt)
-	httpClientSetProxy(client, cfg.Proxy)
+	if len(opts) > 0 {
+		cfg := NewConfig(opts...)
+		httpClientSetTimeout(client, cfg.Timeout)
+		httpClientSetCrt(client, cfg.Crt)
+		httpClientSetProxy(client, cfg.Proxy)
+	}
 	return client
 }
 

@@ -7,9 +7,9 @@ import (
 )
 
 func TestRequest(t *testing.T) {
-	if resp, err := NewRequest(http.MethodGet, "http://localhost:8080/ping").Debug().Send(); err != nil {
+	resp, err := NewRequest(http.MethodGet, "http://localhost:8080/ping").Debug().Send()
+	if err != nil {
 		fmt.Println(err)
-	} else {
-		fmt.Println(resp.StatusOK())
 	}
+	fmt.Println(resp.StatusOK())
 }

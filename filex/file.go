@@ -11,7 +11,6 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/go-xuan/utilx/anyx"
 	"github.com/go-xuan/utilx/errorx"
 	"github.com/go-xuan/utilx/stringx"
 )
@@ -134,7 +133,11 @@ func WriteCSV(path string, data [][]string) error {
 // Open 打开文件
 func Open(path string, flag ...int) (*os.File, error) {
 	CreateIfNotExist(path)
-	file, err := os.OpenFile(path, anyx.Default(Overwrite, flag...), 0644)
+	f := Overwrite
+	if len(flag) > 0 {
+		f = flag[0]
+	}
+	file, err := os.OpenFile(path, f, 0644)
 	if err != nil {
 		return nil, errorx.Wrap(err, "open file error")
 	}

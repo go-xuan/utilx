@@ -6,8 +6,8 @@ import (
 	"github.com/tealeg/xlsx"
 	"github.com/tidwall/gjson"
 
-	"github.com/go-xuan/utilx/anyx"
 	"github.com/go-xuan/utilx/errorx"
+	"github.com/go-xuan/utilx/reflectx"
 	"github.com/go-xuan/utilx/stringx"
 )
 
@@ -18,8 +18,8 @@ const (
 
 // GetHeaderMapping 通过反射获取excel表头映射，key:excel表头，value:结构体字段名
 func GetHeaderMapping(v any) map[string]string {
-	var result = make(map[string]string)
-	var typeOf = anyx.TypeOf(v)
+	result := make(map[string]string)
+	typeOf := reflectx.TypeOf(v)
 	for i := 0; i < typeOf.NumField(); i++ {
 		field := typeOf.Field(i)
 		if header := field.Tag.Get("excel"); header != "" {
@@ -31,13 +31,14 @@ func GetHeaderMapping(v any) map[string]string {
 
 // GetSheet 获取sheet页
 func GetSheet(path string, sheet string) (*xlsx.Sheet, error) {
-	if file, err := xlsx.OpenFile(path); err != nil {
+	file, err := xlsx.OpenFile(path)
+	if err != nil {
 		return nil, errorx.Wrap(err, "open xlsx file error")
-	} else if s, ok := file.Sheet[sheet]; ok {
-		return s, nil
-	} else {
-		return file.Sheets[0], nil
 	}
+	if s, ok := file.Sheet[sheet]; ok {
+		return s, nil
+	}
+	return file.Sheets[0], nil
 }
 
 // ReadWithMapping 根据映射读取excel
@@ -110,7 +111,7 @@ func ReadAny[T any](path, sheet string, t T) ([]*T, error) {
 				data[headers[i]] = cell.String()
 			}
 			var item = new(T)
-			if err = anyx.MapToStruct(data, item); err != nil {
+			if err = reflectx.MapToStruct(data, item); err != nil {
 				return nil, errorx.Wrap(err, "convert map to struct error")
 			}
 			list = append(list, item)

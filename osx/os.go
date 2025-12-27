@@ -9,8 +9,8 @@ import (
 	"github.com/go-xuan/typex"
 	"github.com/sirupsen/logrus"
 
-	"github.com/go-xuan/utilx/anyx"
 	"github.com/go-xuan/utilx/errorx"
+	"github.com/go-xuan/utilx/reflectx"
 )
 
 const (
@@ -53,7 +53,7 @@ func Hostname() string {
 
 // SetValueFromEnv 从环境变量中读取值
 func SetValueFromEnv(v any) error {
-	if err := anyx.MustStructPointer(v); err != nil {
+	if !reflectx.IsStructPointer(v) {
 		return errorx.New("the kind must be struct pointer")
 	}
 	var elem = reflect.ValueOf(v).Elem()
@@ -81,7 +81,7 @@ func SetValueFromEnv(v any) error {
 
 // SetEnvFromValue 将值更新到环境变量
 func SetEnvFromValue(v any) error {
-	if err := anyx.MustStructPointer(v); err != nil {
+	if !reflectx.IsStructPointer(v) {
 		return errorx.New("the kind must be struct pointer")
 	}
 	var elem = reflect.ValueOf(v).Elem()

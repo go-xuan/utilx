@@ -5,13 +5,16 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"gopkg.in/yaml.v3"
 )
 
 // ParseInt 解析数字
 func ParseInt(str string, def ...int) int {
 	if value, err := strconv.Atoi(str); err == nil {
 		return value
-	} else if len(def) > 0 {
+	}
+	if len(def) > 0 {
 		return def[0]
 	}
 	return 0
@@ -21,7 +24,19 @@ func ParseInt(str string, def ...int) int {
 func ParseInt64(str string, def ...int64) int64 {
 	if value, err := strconv.ParseInt(str, 10, 64); err == nil {
 		return value
-	} else if len(def) > 0 {
+	}
+	if len(def) > 0 {
+		return def[0]
+	}
+	return 0
+}
+
+// ParseUint64 解析无符号数字
+func ParseUint64(str string, def ...uint64) uint64 {
+	if value, err := strconv.ParseUint(str, 10, 64); err == nil {
+		return value
+	}
+	if len(def) > 0 {
 		return def[0]
 	}
 	return 0
@@ -31,7 +46,8 @@ func ParseInt64(str string, def ...int64) int64 {
 func ParseFloat(str string, def ...float64) float64 {
 	if value, err := strconv.ParseFloat(str, 64); err == nil {
 		return value
-	} else if len(def) > 0 {
+	}
+	if len(def) > 0 {
 		return def[0]
 	}
 	return 0
@@ -54,12 +70,14 @@ func ParseBool(str string, def ...bool) bool {
 // ParseTime 解析时间字符串
 func ParseTime(str string, def ...time.Time) time.Time {
 	if len(str) == 10 && str[4:5] == "-" {
-		if location, err := time.ParseInLocation("2006-01-02", str, time.Local); err == nil {
-			return location
+		if parse, err := time.Parse("2006-01-02", str); err == nil {
+			return parse
 		}
-	} else if location, err := time.ParseInLocation("2006-01-02 15:04:05", str, time.Local); err == nil {
-		return location
-	} else if len(def) > 0 {
+	}
+	if parse, err := time.Parse("2006-01-02 15:04:05", str); err == nil {
+		return parse
+	}
+	if len(def) > 0 {
 		return def[0]
 	}
 	return time.Time{}
@@ -83,6 +101,17 @@ func Float(f float64) string {
 // Json 转为为json字符串
 func Json(v interface{}) string {
 	data, _ := json.Marshal(v)
+	return string(data)
+}
+
+// JsonIndent 转为为json字符串（格式化）
+func JsonIndent(v interface{}) string {
+	data, _ := json.MarshalIndent(v, "", "  ")
+	return string(data)
+}
+
+func Yaml(v interface{}) string {
+	data, _ := yaml.Marshal(v)
 	return string(data)
 }
 
@@ -234,6 +263,15 @@ func Split(str string, sep string) []string {
 		slice[i] = strings.TrimSpace(s)
 	}
 	return slice
+}
+
+// Spaces 生成指定长度的空格字符串
+func Spaces(length int) string {
+	var runes []rune
+	for i := 0; i < length; i++ {
+		runes = append(runes, 32) // 32为空格
+	}
+	return string(runes)
 }
 
 // Contains 字符串包含
