@@ -28,7 +28,7 @@ func NewCronScheduler(id string, opts ...cron.Option) *CronScheduler {
 		status: initializationStatus,
 		names:  []string{},
 		jobs:   make(map[string]*CronJob),
-		wraps:  make([]funcx.Warp[funcx.X], 0),
+		wraps:  make([]funcx.Wrap[funcx.X], 0),
 	}
 }
 
@@ -40,7 +40,7 @@ type CronScheduler struct {
 	status uint                  // 调度器状态（0-初始化；1-待运行；2-运行中；3-停止）
 	names  []string              // 任务entryID列表
 	jobs   map[string]*CronJob   // 定时任务
-	wraps  []funcx.Warp[funcx.X] // 定时任务执行函数包装器
+	wraps  []funcx.Wrap[funcx.X] // 定时任务执行函数包装器
 }
 
 func (c *CronScheduler) GetID() string {
@@ -72,7 +72,7 @@ func (c *CronScheduler) Start() error {
 }
 
 // AddWrap 添加包装器
-func (c *CronScheduler) AddWrap(wraps ...funcx.Warp[funcx.X]) *CronScheduler {
+func (c *CronScheduler) AddWrap(wraps ...funcx.Wrap[funcx.X]) *CronScheduler {
 	c.wraps = append(c.wraps, wraps...)
 	return c
 }
@@ -95,7 +95,7 @@ func (c *CronScheduler) AddJob(name, spec string, function funcx.X) *CronSchedul
 	}
 
 	// 遍历装饰器，对任务执行函数进行包装
-	job.function = funcx.XWarp(function, c.wraps...)
+	job.function = funcx.WrapX(function, c.wraps...)
 
 	// 添加定时任务
 	entryId, err := c.cron.AddJob(spec, job)

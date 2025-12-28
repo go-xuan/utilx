@@ -7,11 +7,11 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-// Warp 包装函数
-type Warp[F any] func(F) F
+// Wrap 包装函数
+type Wrap[F any] func(F) F
 
-// VWarp 包装V函数
-func VWarp(function V, wraps ...Warp[V]) V {
+// WrapV 包装V函数
+func WrapV(function V, wraps ...Wrap[V]) V {
 	if function != nil && len(wraps) > 0 {
 		for _, wrap := range wraps {
 			function = wrap(function)
@@ -20,8 +20,8 @@ func VWarp(function V, wraps ...Warp[V]) V {
 	return function
 }
 
-// EWarp 包装E函数
-func EWarp(function E, wraps ...Warp[E]) E {
+// WrapE 包装E函数
+func WrapE(function E, wraps ...Wrap[E]) E {
 	if function != nil && len(wraps) > 0 {
 		for _, wrap := range wraps {
 			function = wrap(function)
@@ -30,8 +30,8 @@ func EWarp(function E, wraps ...Warp[E]) E {
 	return function
 }
 
-// CWarp 包装C函数
-func CWarp(function C, wraps ...Warp[C]) C {
+// WrapC 包装C函数
+func WrapC(function C, wraps ...Wrap[C]) C {
 	if function != nil && len(wraps) > 0 {
 		for _, wrap := range wraps {
 			function = wrap(function)
@@ -40,8 +40,8 @@ func CWarp(function C, wraps ...Warp[C]) C {
 	return function
 }
 
-// XWarp 包装X函数
-func XWarp(function X, wraps ...Warp[X]) X {
+// WrapX 包装X函数
+func WrapX(function X, wraps ...Wrap[X]) X {
 	if function != nil && len(wraps) > 0 {
 		for _, wrap := range wraps {
 			function = wrap(function)
@@ -50,8 +50,8 @@ func XWarp(function X, wraps ...Warp[X]) X {
 	return function
 }
 
-// VDuration 记录V函数执行时间
-func VDuration(function V) V {
+// DurationV 记录V函数执行时间
+func DurationV(function V) V {
 	return func() {
 		start := time.Now()
 		defer log.WithField("duration", time.Since(start)).Info()
@@ -59,8 +59,8 @@ func VDuration(function V) V {
 	}
 }
 
-// EDuration 记录E函数执行时间
-func EDuration(function E) E {
+// DurationE 记录E函数执行时间
+func DurationE(function E) E {
 	return func() error {
 		start := time.Now()
 		defer log.WithField("duration", time.Since(start)).Info()
@@ -68,8 +68,8 @@ func EDuration(function E) E {
 	}
 }
 
-// CDuration 记录C函数执行时间
-func CDuration(function C) C {
+// DurationC 记录C函数执行时间
+func DurationC(function C) C {
 	return func(ctx context.Context) {
 		start := time.Now()
 		defer log.WithField("duration", time.Since(start)).Info()
@@ -77,8 +77,8 @@ func CDuration(function C) C {
 	}
 }
 
-// XDuration 记录X函数执行时间
-func XDuration(function X) X {
+// DurationX 记录X函数执行时间
+func DurationX(function X) X {
 	return func(ctx context.Context) error {
 		start := time.Now()
 		defer log.WithField("duration", time.Since(start)).Info()

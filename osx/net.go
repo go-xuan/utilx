@@ -9,22 +9,20 @@ import (
 // GetLocalIP 获取本地IP
 func GetLocalIP() string {
 	if addrs, err := net.InterfaceAddrs(); err == nil {
-		return findValidIP(addrs)
+		return getIPv4(addrs)
 	}
 	return ""
 }
 
 // GetWLANIP 获取当前机器的WLAN Host
 func GetWLANIP() string {
-	interfaces, err := net.Interfaces()
-	if err != nil {
-		return ""
-	}
-	for _, item := range interfaces {
-		if (item.Flags&net.FlagUp) != 0 && item.Name == "WLAN" {
-			if addrs, e := item.Addrs(); e == nil {
-				if ip := findValidIP(addrs); ip != "" {
-					return ip
+	if interfaces, err := net.Interfaces(); err == nil {
+		for _, in := range interfaces {
+			if (in.Flags&net.FlagUp) != 0 && in.Name == "WLAN" {
+				if addrs, e := in.Addrs(); e == nil {
+					if ip := getIPv4(addrs); ip != "" {
+						return ip
+					}
 				}
 			}
 		}
@@ -32,11 +30,11 @@ func GetWLANIP() string {
 	return ""
 }
 
-// findValidIP 从地址列表中查找有效的 IPv4 地址
-func findValidIP(addrs []net.Addr) string {
-	for _, address := range addrs {
-		if ipNet, ok := address.(*net.IPNet); ok && !ipNet.IP.IsLoopback() {
-			if ip := ipNet.IP.To4(); ip != nil {
+// getIPv4 从地址列表中查找有效的 IPv4 地址
+func getIPv4(addrs []net.Addr) string {
+	for _, addr := range addrs {
+		if n, ok := addr.(*net.IPNet); ok && !n.IP.IsLoopback() {
+			if ip := n.IP.To4(); ip != nil {
 				return ip.String()
 			}
 		}
@@ -50,7 +48,6 @@ func CheckIpMatch(rules []string, ip string) bool {
 		return false
 	}
 
-	ipParts := strings.Split(ip, ".")
 	for _, rule := range rules {
 		if strings.Contains(rule, `-`) {
 			ruleStart, ruleEnd, found := strings.Cut(rule, `-`)
@@ -63,21 +60,25 @@ func CheckIpMatch(rules []string, ip string) bool {
 			if prefix == startPrefix && prefix == endPrefix && num >= minNum && num <= maxNum {
 				return true
 			}
-		} else {
-			ruleParts := strings.Split(rule, ".")
-			match := true
-			for i := 0; i < len(ruleParts); i++ {
-				if ruleParts[i] != "*" && ruleParts[i] != ipParts[i] {
-					match = false
-					break
-				}
-			}
-			if match {
-				return true
-			}
+		} else if ipMatch(rule, ip) {
+			return true
 		}
 	}
 	return false
+}
+
+// ipMatch 检测IP是否匹配规则
+func ipMatch(rule, ip string) bool {
+	ruleParts := strings.Split(rule, ".")
+	ipParts := strings.Split(ip, ".")
+	match := true
+	for i := 0; i < len(ruleParts); i++ {
+		if ruleParts[i] != "*" && ruleParts[i] != ipParts[i] {
+			match = false
+			break
+		}
+	}
+	return match
 }
 
 // SplitIpByLastPoint 将IP以最后一个.拆分

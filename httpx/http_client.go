@@ -22,12 +22,14 @@ func NewClient(opts ...Option) *http.Client {
 	return client
 }
 
+// 设置http客户端超时时间
 func httpClientSetTimeout(client *http.Client, timeout time.Duration) {
 	if timeout > 0 {
 		client.Timeout = timeout
 	}
 }
 
+// 设置http客户端证书
 func httpClientSetCrt(client *http.Client, crt string) {
 	if crt != "" {
 		if pem, err := os.ReadFile(crt); err == nil {
@@ -43,6 +45,7 @@ func httpClientSetCrt(client *http.Client, crt string) {
 	}
 }
 
+// 设置http客户端代理
 func httpClientSetProxy(client *http.Client, proxy string) {
 	if proxy != "" {
 		if u, err := url.Parse(proxy); err == nil {

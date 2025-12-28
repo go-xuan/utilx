@@ -23,26 +23,20 @@ func (p propertiesImpl) Name() string {
 }
 
 func (p propertiesImpl) Marshal(v interface{}) ([]byte, error) {
-	var b bytes.Buffer
-	val := reflect.ValueOf(v)
-	typ := val.Type()
-	for i := 0; i < val.NumField(); i++ {
-		key := typ.Field(i).Tag.Get("properties")
-		value := val.Field(i).Interface()
-		b.WriteString(fmt.Sprintf("%s=%v\n", key, value))
-	}
-	return b.Bytes(), nil
+	buffer := &bytes.Buffer{}
+	propertiesMarshal(buffer, reflectx.ValueOf(v), "")
+	return buffer.Bytes(), nil
 }
 
 func (p propertiesImpl) Unmarshal(data []byte, v interface{}) error {
 	if !reflectx.IsStructPointer(v) {
 		return errorx.New("the kind must be struct pointer")
 	}
-	pro, err := properties.Load(data, properties.UTF8)
+	pp, err := properties.Load(data, properties.UTF8)
 	if err != nil {
 		return errorx.Wrap(err, "load properties error")
 	}
-	propertiesSetStructValue(pro, reflect.ValueOf(v).Elem())
+	propertiesSetStruct(pp, reflectx.ValueOf(v), "")
 	return nil
 }
 
@@ -65,34 +59,107 @@ func (p propertiesImpl) Write(path string, v interface{}) error {
 	return nil
 }
 
-// 通过反射为结构体赋值
-func propertiesSetStructValue(pp *properties.Properties, value reflect.Value) {
-	for i := 0; i < value.NumField(); i++ {
-		field := value.Field(i)
-		if tag := value.Type().Field(i).Tag.Get("properties"); tag != "" {
-			propertiesSetFieldValue(pp, tag, field)
+// properties序列化
+func propertiesMarshal(b *bytes.Buffer, value reflect.Value, parent string) {
+	if value.Kind() == reflect.Pointer {
+		value = value.Elem()
+	}
+	typ := value.Type()
+	for i := 0; i < typ.NumField(); i++ {
+		fieldValue, structField := value.Field(i), typ.Field(i)
+		if key := structField.Tag.Get(PROPERTIES); key != "" {
+			key = propertiesKey(key, parent)
+			switch fieldValue.Kind() {
+			case reflect.Struct, reflect.Pointer:
+				propertiesMarshal(b, fieldValue, key)
+			case reflect.Slice:
+				propertiesMarshalSlice(b, fieldValue, key)
+			default:
+				b.WriteString(fmt.Sprintf("%s=%v\n", key, fieldValue.Interface()))
+			}
 		}
 	}
 }
 
-// 通过反射为字段赋值
-func propertiesSetFieldValue(pp *properties.Properties, key string, field reflect.Value) {
-	switch field.Kind() {
-	case reflect.String:
-		field.SetString(pp.GetString(key, ""))
-	case reflect.Bool:
-		field.SetBool(pp.GetBool(key, false))
-	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-		field.SetInt(int64(pp.GetInt(key, 0)))
-	case reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
-		field.SetInt(int64(pp.GetInt(key, 0)))
-	case reflect.Float32, reflect.Float64:
-		field.SetFloat(pp.GetFloat64(key, 0))
-	case reflect.Struct:
-		propertiesSetStructValue(pp, field)
-	case reflect.Pointer:
-		propertiesSetStructValue(pp, field.Elem())
-	default:
-		fmt.Println("unsupported kind:", field.Kind())
+// properties序列化slice
+func propertiesMarshalSlice(b *bytes.Buffer, value reflect.Value, parent string) {
+	for i := 0; i < value.Len(); i++ {
+		propertiesMarshal(b, value.Index(i), fmt.Sprintf("%s[%d]", parent, i))
 	}
+}
+
+// properties赋值给结构体
+func propertiesSetStruct(p *properties.Properties, value reflect.Value, parent string) {
+	typ := value.Type()
+	for i := 0; i < typ.NumField(); i++ {
+		fieldValue, structField := value.Field(i), typ.Field(i)
+		if key := structField.Tag.Get(PROPERTIES); key != "" && fieldValue.CanSet() {
+			key = propertiesKey(key, parent)
+			switch fieldValue.Kind() {
+			case reflect.String:
+				fieldValue.SetString(p.GetString(key, ""))
+			case reflect.Bool:
+				fieldValue.SetBool(p.GetBool(key, false))
+			case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+				fieldValue.SetInt(int64(p.GetInt(key, 0)))
+			case reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+				fieldValue.SetUint(uint64(p.GetInt(key, 0)))
+			case reflect.Float32, reflect.Float64:
+				fieldValue.SetFloat(p.GetFloat64(key, 0))
+			case reflect.Struct:
+				propertiesSetStruct(p, fieldValue, key)
+			case reflect.Pointer:
+				if fieldValue.IsNil() {
+					fieldValue.Set(reflect.New(structField.Type.Elem()))
+				}
+				propertiesSetStruct(p, fieldValue.Elem(), key)
+			case reflect.Slice, reflect.Array:
+				propertiesSetSlice(p, fieldValue, key)
+			default:
+			}
+		}
+	}
+}
+
+// properties赋值slice
+func propertiesSetSlice(p *properties.Properties, value reflect.Value, parent string) {
+	elem, pointer := value.Type().Elem(), false
+	if elem.Kind() == reflect.Pointer {
+		elem, pointer = elem.Elem(), true
+	}
+	index := 0
+	for {
+		key := fmt.Sprintf("%s[%d]", parent, index)
+		if !propertiesExist(p, elem, key) {
+			break
+		}
+		instance := reflect.New(elem).Elem()
+		propertiesSetStruct(p, instance, key)
+		if pointer {
+			instance = instance.Addr()
+		}
+		value.Set(reflect.Append(value, instance))
+		index++
+	}
+}
+
+// 获取properties key
+func propertiesKey(key string, parent string) string {
+	if parent != "" {
+		key = fmt.Sprintf("%s.%s", parent, key)
+	}
+	return key
+}
+
+// 检查是否存在properties键值对
+func propertiesExist(p *properties.Properties, typ reflect.Type, parent string) bool {
+	for i := 0; i < typ.NumField(); i++ {
+		if key := typ.Field(i).Tag.Get(PROPERTIES); key != "" {
+			key = propertiesKey(key, parent)
+			if _, ok := p.Get(key); ok {
+				return true
+			}
+		}
+	}
+	return false
 }

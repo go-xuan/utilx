@@ -16,7 +16,7 @@ func TestCronScheduler(t *testing.T) {
 		cron.WithChain(cron.SkipIfStillRunning(logger)),
 	)
 
-	scheduler.AddWrap(funcx.XDuration)
+	scheduler.AddWrap(funcx.DurationX)
 	scheduler.AddJob("1", "@every 5s", function(1, 0.5))
 	scheduler.AddJob("2", "@every 2s", function(2, 0.8))
 	scheduler.AddJob("3", "@daily", function(3, 0.3))

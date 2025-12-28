@@ -9,14 +9,14 @@ import (
 
 func TestExecute(t *testing.T) {
 	ctx := t.Context()
-	VExecute(testV1, testV2)
+	ExecuteV(testV1, testV2)
 
-	x := XMerge(ctx, testX1, testX2, testX3)
+	x := MergeX(ctx, testX1, testX2, testX3)
 	if err := x(ctx); err != nil {
 		fmt.Println(err)
 	}
 
-	if err := XExecute(ctx, testX1, testX2, testX3); err != nil {
+	if err := ExecuteX(ctx, testX1, testX2, testX3); err != nil {
 		fmt.Println(err)
 	}
 }

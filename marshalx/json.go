@@ -8,7 +8,7 @@ import (
 )
 
 // Json 序列化方式
-// indent: 缩进值，默认不缩进，仅在 Marshal 时有效
+// indent: 缩进值，默认不缩进
 func Json(indent ...string) Marshal {
 	if len(indent) > 0 {
 		return jsonImpl{indent: indent[0]}

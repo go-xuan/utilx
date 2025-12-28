@@ -68,8 +68,8 @@ func (f *Field) GetValue() typex.Value {
 }
 
 // GetKind 获取结构体字段的类型
-func (f *Field) GetKind() string {
-	return f.Info.Type.Kind().String()
+func (f *Field) GetKind() reflect.Kind {
+	return f.Info.Type.Kind()
 }
 
 // GetInterface 获取结构体字段的值
@@ -80,8 +80,8 @@ func (f *Field) GetInterface() interface{} {
 	return nil
 }
 
-// GetTag 获取结构体字段的标签
-func (f *Field) GetTag(tag string) (string, bool) {
+// TagLookup 获取结构体字段的标签
+func (f *Field) TagLookup(tag string) (string, bool) {
 	return f.Info.Tag.Lookup(tag)
 }
 
@@ -89,7 +89,7 @@ func (f *Field) GetTag(tag string) (string, bool) {
 func (f *Field) Extract(tag ...string) (string, string) {
 	if len(tag) == 0 || tag[0] == "" {
 		return f.GetName(), f.GetValue().String()
-	} else if name, _ := f.GetTag(tag[0]); name != "-" {
+	} else if name, _ := f.TagLookup(tag[0]); name != "-" {
 		return name, f.GetValue().String()
 	}
 	return "", ""

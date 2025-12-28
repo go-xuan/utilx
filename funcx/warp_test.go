@@ -7,28 +7,28 @@ import (
 )
 
 func TestWarp(t *testing.T) {
-	VWarp(testV1, VDuration)()
+	WrapV(testV1, DurationV)()
 
 	fmt.Print("\n\n\n")
 
-	CWarp(testC1, CDuration)(t.Context())
+	WrapC(testC1, DurationC)(t.Context())
 
 	fmt.Print("\n\n\n")
 
-	if err := EWarp(testE1, EDuration)(); err != nil {
-		t.Errorf("EWarp failed: %v", err)
+	if err := WrapE(testE1, DurationE)(); err != nil {
+		t.Errorf("WrapE failed: %v", err)
 	}
 
 	fmt.Print("\n\n\n")
 
-	if err := XWarp(testX1, beforeX, afterX, XDuration)(t.Context()); err != nil {
-		t.Errorf("XWarp failed: %v", err)
+	if err := WrapX(testX1, beforeX, afterX, DurationX)(t.Context()); err != nil {
+		t.Errorf("WrapX failed: %v", err)
 	}
 
 	fmt.Print("\n\n\n")
 
-	if err := XWarp(testX1, XDuration, afterX, beforeX)(t.Context()); err != nil {
-		t.Errorf("XWarp failed: %v", err)
+	if err := WrapX(testX1, DurationX, afterX, beforeX)(t.Context()); err != nil {
+		t.Errorf("WrapX failed: %v", err)
 	}
 }
 
