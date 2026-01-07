@@ -13,13 +13,34 @@ import (
 // NewClient 新建http客户端
 func NewClient(opts ...Option) *http.Client {
 	client := http.DefaultClient
-	if len(opts) > 0 {
-		cfg := NewConfig(opts...)
-		httpClientSetTimeout(client, cfg.Timeout)
-		httpClientSetCrt(client, cfg.Crt)
-		httpClientSetProxy(client, cfg.Proxy)
+	for _, opt := range opts {
+		opt(client)
 	}
 	return client
+}
+
+// Option 配置选项
+type Option func(client *http.Client)
+
+// SetTimeout 设置超时时间
+func SetTimeout(timeout time.Duration) Option {
+	return func(client *http.Client) {
+		httpClientSetTimeout(client, timeout)
+	}
+}
+
+// SetCrt 设置https证书路径
+func SetCrt(crt string) Option {
+	return func(client *http.Client) {
+		httpClientSetCrt(client, crt)
+	}
+}
+
+// SetProxy 设置代理地址
+func SetProxy(proxy string) Option {
+	return func(client *http.Client) {
+		httpClientSetProxy(client, proxy)
+	}
 }
 
 // 设置http客户端超时时间

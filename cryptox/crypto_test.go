@@ -39,41 +39,48 @@ func TestAES(t *testing.T) {
 }
 
 func TestRsa(t *testing.T) {
-	data, err := filex.ReadFile("./rsa/private.pem")
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
-	var rsaCrypto *RsaCrypto
-	if rsaCrypto, err = ParseRsaCrypto(data, PKCS8); err != nil {
-		fmt.Println(err)
-		return
-	}
-	bytes, _ := json.Marshal(struct {
-		AppID     string `json:"app_id"`
-		Timestamp int64  `json:"timestamp"`
-	}{
-		AppID:     "1234567890",
-		Timestamp: time.Now().Unix(),
+	t.Run("Rsa", func(t *testing.T) {
+		crypto, err := NewRsaCrypto(1024)
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+		plaintext := []byte("hello world")
+		var ciphertext []byte
+		if ciphertext, err = crypto.Encrypt(plaintext); err != nil {
+			fmt.Println(err)
+			return
+		}
+		fmt.Println("加密：", encodingx.Base64().Encode(ciphertext))
+
+		if plaintext, err = crypto.Decrypt(ciphertext); err != nil {
+			fmt.Println(err)
+			return
+		}
+		fmt.Println("解密：", string(plaintext))
+
+		if err = crypto.SavePrivateKey("./rsa/private.pem", PKCS1); err != nil {
+			fmt.Println(err)
+			return
+		}
+		if err = crypto.SavePublicKey("./rsa/public.pem", PKCS1); err != nil {
+			fmt.Println(err)
+			return
+		}
 	})
 
-	var ciphertext, plaintext []byte
-	if ciphertext, err = rsaCrypto.Encrypt(bytes); err != nil {
-		fmt.Println(err)
-		return
-	}
-	fmt.Println("加密：", encodingx.Base64().Encode(ciphertext))
-
-	if plaintext, err = rsaCrypto.Decrypt(ciphertext); err != nil {
-		fmt.Println(err)
-		return
-	}
-	fmt.Println("解密：", string(plaintext))
-
-	if err = rsaCrypto.SavePrivateKey("./rsa/private.pem", PKCS8); err != nil {
-		fmt.Println(err)
-	}
-	if err = rsaCrypto.SavePublicKey("./rsa/public-1.pem", PKCS1); err != nil {
-		fmt.Println(err)
-	}
+	t.Run("public key", func(t *testing.T) {
+		publicKey, err := filex.ReadFile("./rsa/public.pem")
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+		plaintext := []byte("hello world")
+		ciphertext, err := RsaEncrypt(plaintext, publicKey, PKCS1)
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+		fmt.Println("加密：", encodingx.Base64().Encode(ciphertext))
+	})
 }

@@ -54,7 +54,7 @@ func ParseRsaCrypto(data []byte, mode Mode) (*RsaCrypto, error) {
 		}
 		return &RsaCrypto{PrivateKey: privateKey.(*rsa.PrivateKey)}, nil
 	default:
-		return nil, errorx.Sprintf("unsupported private mode: %d", mode)
+		return nil, errorx.Sprintf("unsupported private mode: %s", mode)
 	}
 }
 
@@ -91,7 +91,7 @@ func (c *RsaCrypto) SavePrivateKey(path string, mode Mode) error {
 			Bytes: data,
 		})
 	default:
-		return errorx.Sprintf("unsupported private key mode: %d", mode)
+		return errorx.Sprintf("unsupported private key mode: %s", mode)
 	}
 }
 
@@ -113,67 +113,79 @@ func (c *RsaCrypto) SavePublicKey(path string, mode Mode) error {
 			Bytes: data,
 		})
 	default:
-		return errorx.Sprintf("unsupported public key mode: %d", mode)
+		return errorx.Sprintf("unsupported public key mode: %s", mode)
 	}
 }
 
 // RsaEncrypt 公钥加密
 func RsaEncrypt(plaintext, publicKey []byte, mode Mode) ([]byte, error) {
+	block, _ := pem.Decode(publicKey)
+	if block == nil {
+		return nil, errorx.New("decode public key error")
+	}
 	switch mode {
 	case PKCS1:
-		key, err := x509.ParsePKCS1PublicKey(publicKey)
+		key, err := x509.ParsePKCS1PublicKey(block.Bytes)
 		if err != nil {
 			return nil, errorx.Wrap(err, "parse PKCS1 public key error")
 		}
 		return rsa.EncryptPKCS1v15(rand.Reader, key, plaintext)
 	case PKIX:
-		key, err := x509.ParsePKIXPublicKey(publicKey)
+		key, err := x509.ParsePKIXPublicKey(block.Bytes)
 		if err != nil {
 			return nil, errorx.Wrap(err, "parse PKIX public key error")
 		}
 		return rsa.EncryptPKCS1v15(rand.Reader, key.(*rsa.PublicKey), plaintext)
 	default:
-		return nil, errorx.Sprintf("unsupported public key mode: %d", mode)
+		return nil, errorx.Sprintf("unsupported public key mode: %s", mode)
 	}
 }
 
 // ParseRsaPrivateKey 从私钥block解析私钥
-func ParseRsaPrivateKey(publicKey []byte, mode Mode) (*rsa.PrivateKey, error) {
+func ParseRsaPrivateKey(privateKey []byte, mode Mode) (*rsa.PrivateKey, error) {
+	block, _ := pem.Decode(privateKey)
+	if block == nil {
+		return nil, errorx.New("decode public key error")
+	}
 	switch mode {
 	case PKCS1:
-		key, err := x509.ParsePKCS1PrivateKey(publicKey)
+		key, err := x509.ParsePKCS1PrivateKey(block.Bytes)
 		if err != nil {
 			return nil, errorx.Wrap(err, "parse PKCS1 private key error")
 		}
 		return key, nil
 	case PKCS8:
-		key, err := x509.ParsePKCS8PrivateKey(publicKey)
+		key, err := x509.ParsePKCS8PrivateKey(block.Bytes)
 		if err != nil {
 			return nil, errorx.Wrap(err, "parse PKCS8 private key error")
 		}
 		return key.(*rsa.PrivateKey), nil
 	default:
-		return nil, errorx.Sprintf("unsupported private key mode: %d", mode)
+		return nil, errorx.Sprintf("unsupported private key mode: %s", mode)
 	}
 }
 
 // ParseRsaPublicKey 从公钥block解析公钥
 func ParseRsaPublicKey(publicKey []byte, mode Mode) (*rsa.PublicKey, error) {
+	block, _ := pem.Decode(publicKey)
+	if block == nil {
+		return nil, errorx.New("decode public key error")
+	}
 	switch mode {
 	case PKCS1:
-		key, err := x509.ParsePKCS1PublicKey(publicKey)
+		key, err := x509.ParsePKCS1PublicKey(block.Bytes)
 		if err != nil {
 			return nil, errorx.Wrap(err, "parse PKCS1 public key error")
 		}
 		return key, nil
 	case PKIX:
-		key, err := x509.ParsePKIXPublicKey(publicKey)
+		key, err := x509.ParsePKIXPublicKey(block.Bytes)
 		if err != nil {
 			return nil, errorx.Wrap(err, "parse PKIX public key error")
 		}
 		return key.(*rsa.PublicKey), nil
 	default:
-		return nil, errorx.Sprintf("unsupported public key mode: %d", mode)
+		return nil, errorx.Sprintf("unsupported public key mode: %s", mode)
 	}
 }
 
