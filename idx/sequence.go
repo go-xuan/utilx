@@ -13,12 +13,12 @@ func GetSequence(name string) *Sequence {
 	if sequencePool == nil {
 		sequencePool = typex.NewStringEnum[*Sequence]()
 	}
-	if !sequencePool.Exist(name) {
-		sequence := NewSequence(name, 0, 1)
+	sequence, ok := sequencePool.Exist(name)
+	if !ok {
+		sequence = NewSequence(name, 0, 1)
 		sequencePool.Add(name, sequence)
-		return sequence
 	}
-	return sequencePool.Get(name)
+	return sequence
 }
 
 // AddSequence 创建序列
