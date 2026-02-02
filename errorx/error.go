@@ -57,7 +57,7 @@ func Unwrap(err error) error {
 	return nil
 }
 
-// Panic 恐慌
+// Panic 断言error是否为nil，若不为nil则panic
 func Panic(err error) {
 	if err != nil {
 		panic(err)

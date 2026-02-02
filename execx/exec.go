@@ -11,10 +11,10 @@ import (
 
 // NewCommand 创建命令
 func NewCommand(command string) *Command {
-	if runtime.GOOS == `windows` {
-		return &Command{exec.Command("cmd", `/C`, command)}
+	if runtime.GOOS == "windows" {
+		return &Command{exec.Command("cmd", "/C", command)}
 	}
-	return &Command{exec.Command("/bin/bash", `-c`, command)}
+	return &Command{exec.Command("/bin/bash", "-c", command)}
 }
 
 // Command 命令

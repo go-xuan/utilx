@@ -43,14 +43,14 @@ func (s *Splitter[T]) Execute(ctx context.Context) error {
 		logger.Info("splitter execute success")
 		return nil
 	}
-	return s.strategy.Execute(ctx, len(s.tasks), func(ctx context.Context, start, end, times int) error {
+	return s.strategy.Execute(ctx, len(s.tasks), func(ctx context.Context, start, end, times int) (bool, error) {
 		logger = logger.WithField("start", start).WithField("end", end).WithField("times", times)
 		if err := s.batchFunc(ctx, s.tasks[start:end]); err != nil {
 			logger.WithError(err).Error("batch function execute error")
-			return err
+			return true, err
 		}
 		logger.Info("batch function execute success")
-		return nil
+		return false, nil
 	})
 }
 
@@ -84,7 +84,7 @@ type SplitterStrategy struct {
 // start 开始索引
 // end 结束索引
 // times 执行次数
-func (s *SplitterStrategy) Execute(ctx context.Context, total int, execute func(ctx context.Context, start, end, times int) error) error {
+func (s *SplitterStrategy) Execute(ctx context.Context, total int, execute func(ctx context.Context, start, end, times int) (bool, error)) error {
 	var offset, times int
 	for offset < total {
 		times++
@@ -92,8 +92,10 @@ func (s *SplitterStrategy) Execute(ctx context.Context, total int, execute func(
 		if next > total {
 			next = total
 		}
-		if err := execute(ctx, offset, next, times); err != nil {
+		if stop, err := execute(ctx, offset, next, times); err != nil {
 			return errorx.Wrap(err, "batch execute error")
+		} else if stop {
+			break
 		}
 		offset = next
 	}

@@ -6,49 +6,122 @@ import (
 	"github.com/go-xuan/typex"
 )
 
-// Fields 获取结构体字段
-func Fields(v any) []*Field {
+// GetRowsByNames 根据字段名获取切片数据
+func GetRowsByNames[T any](slice []T, names ...string) [][]string {
+	var rows [][]string
+	for i, item := range slice {
+		headers, values := GetValuesByNames(item, names...)
+		if i == 0 {
+			rows = append(rows, headers)
+		}
+		rows = append(rows, values)
+	}
+	return rows
+}
+
+// GetValuesByNames 根据字段名获取结构体的name+value
+func GetValuesByNames(v any, names ...string) ([]string, []string) {
+	if fields := GetFieldsByNames(v, names...); len(fields) > 0 {
+		var headers, values []string
+		for _, field := range fields {
+			name, value := field.Extract()
+			headers = append(headers, name)
+			values = append(values, value)
+		}
+		return headers, values
+	}
+	return nil, nil
+}
+
+// GetFieldsByNames 根据字段名提取字段
+func GetFieldsByNames(v any, names ...string) []*Field {
 	if IsStruct(v) {
 		val := ValueOf(v)
 		typ := val.Type()
 		var fields []*Field
+		if len(names) == 0 {
+			for i := 0; i < typ.NumField(); i++ {
+				fields = append(fields, &Field{
+					Info:  typ.Field(i),
+					Value: val.Field(i),
+				})
+			}
+			return fields
+		}
+
+		set := make(map[string]*Field)
+		for _, name := range names {
+			field := &Field{}
+			fields = append(fields, field)
+			set[name] = field
+		}
 		for i := 0; i < typ.NumField(); i++ {
-			fields = append(fields, &Field{
-				Info:  typ.Field(i),
-				Value: val.Field(i),
-			})
+			info := typ.Field(i)
+			if field, ok := set[info.Name]; ok {
+				field.Info = info
+				field.Value = val.Field(i)
+			}
 		}
 		return fields
 	}
 	return nil
 }
 
-// ExtractValues 提取结构体字段的value
-func ExtractValues(v any, tag ...string) ([]string, []string) {
-	if fields := Fields(v); len(fields) > 0 {
-		var names, values []string
-		for _, field := range fields {
-			if name, value := field.Extract(tag...); name != "" {
-				names = append(names, name)
-				values = append(values, value)
-			}
-		}
-		return names, values
-	}
-	return nil, nil
-}
-
-// Rows 获取结构体字段的name-value对
-func Rows[T any](slice []T, withHeader bool) [][]string {
+// GetRowsByTag 根据tag获取切片数据
+func GetRowsByTag[T any](slice []T, tag ...string) [][]string {
 	var rows [][]string
 	for i, item := range slice {
-		names, values := ExtractValues(item)
-		if i == 0 && withHeader {
-			rows = append(rows, names)
+		headers, values := GetValuesByTag(item, tag...)
+		if i == 0 {
+			rows = append(rows, headers)
 		}
 		rows = append(rows, values)
 	}
 	return rows
+}
+
+// GetValuesByTag 根据tag提取结构体的name+value
+func GetValuesByTag(v any, tag ...string) ([]string, []string) {
+	if fields := GetFieldsByTag(v, tag...); len(fields) > 0 {
+		var headers, values []string
+		for _, field := range fields {
+			name, value := field.Extract(tag...)
+			headers = append(headers, name)
+			values = append(values, value)
+		}
+		return headers, values
+	}
+	return nil, nil
+}
+
+// GetFieldsByTag 根据tag提取字段
+func GetFieldsByTag(v any, tag ...string) []*Field {
+	if IsStruct(v) {
+		val := ValueOf(v)
+		typ := val.Type()
+		var fields []*Field
+		if len(tag) == 0 || tag[0] == "" {
+			for i := 0; i < typ.NumField(); i++ {
+				fields = append(fields, &Field{
+					Info:  typ.Field(i),
+					Value: val.Field(i),
+				})
+			}
+			return fields
+		}
+		key := tag[0]
+		for i := 0; i < typ.NumField(); i++ {
+			info := typ.Field(i)
+			if value, ok := info.Tag.Lookup(key); ok && value != "-" {
+				fields = append(fields, &Field{
+					Info:  info,
+					Value: val.Field(i),
+				})
+			}
+		}
+		return fields
+	}
+	return nil
 }
 
 // Field 结构体字段
@@ -87,10 +160,11 @@ func (f *Field) TagLookup(tag string) (string, bool) {
 
 // Extract 提取name-value对
 func (f *Field) Extract(tag ...string) (string, string) {
-	if len(tag) == 0 || tag[0] == "" {
-		return f.GetName(), f.GetValue().String()
-	} else if name, _ := f.TagLookup(tag[0]); name != "-" {
-		return name, f.GetValue().String()
+	value := f.GetValue().String()
+	if len(tag) > 0 && tag[0] != "" {
+		if name, ok := f.TagLookup(tag[0]); ok && name != "-" {
+			return name, value
+		}
 	}
-	return "", ""
+	return f.GetName(), value
 }

@@ -12,9 +12,9 @@ func TestSplitterStrategy(t *testing.T) {
 	for i := 1; i <= total; i++ {
 		tasks = append(tasks, i)
 	}
-	execute := func(ctx context.Context, start, end, batch int) error {
+	execute := func(ctx context.Context, start, end, batch int) (bool, error) {
 		fmt.Printf("%d ==> [%d:%d] ==> %v \n", batch, start, end, tasks[start:end])
-		return nil
+		return false, nil
 	}
 	if err := NewSplitterStrategy(17).Execute(t.Context(), total, execute); err != nil {
 		t.Log(err)

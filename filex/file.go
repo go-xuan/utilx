@@ -37,7 +37,6 @@ func ReadFileLine(path string) ([]string, error) {
 	}
 	defer errorx.Close(file)
 
-	// 按行处理txt
 	reader := bufio.NewReader(file)
 	var lines []string
 	for {
@@ -48,6 +47,27 @@ func ReadFileLine(path string) ([]string, error) {
 		lines = append(lines, string(line))
 	}
 	return lines, nil
+}
+
+// ReadFileLine2Writer 按行读取文件内容并写入到writer
+func ReadFileLine2Writer(path string, writer io.Writer) error {
+	file, err := os.OpenFile(path, os.O_RDONLY, 0644)
+	if err != nil {
+		return errorx.Wrap(err, "open file error")
+	}
+	defer errorx.Close(file)
+
+	reader := bufio.NewReader(file)
+	for {
+		var line []byte
+		if line, _, err = reader.ReadLine(); err == io.EOF {
+			break
+		} else if err != nil {
+			return errorx.Wrap(err, "read line error")
+		}
+		_, _ = writer.Write(line)
+	}
+	return nil
 }
 
 // Replace 内容替换
@@ -94,7 +114,7 @@ func WriteFileString(path, data string, flag ...int) error {
 }
 
 // WriteFileLine 数组按行写入文件
-func WriteFileLine(path string, content []string, flag ...int) error {
+func WriteFileLine(path string, lines []string, flag ...int) error {
 	file, err := Open(path, flag...)
 	if err != nil {
 		return errorx.Wrap(err, "open file error")
@@ -102,7 +122,7 @@ func WriteFileLine(path string, content []string, flag ...int) error {
 	defer errorx.Close(file)
 
 	writer := bufio.NewWriter(file)
-	for _, line := range content {
+	for _, line := range lines {
 		_, _ = writer.WriteString(line)
 		_, _ = writer.WriteString("\n")
 	}
@@ -174,7 +194,7 @@ func SplitFile(path string, size int) ([]string, error) {
 	dir = filepath.Join(dir, filename)
 	reader := bufio.NewReader(file)
 	count, index := 1, 1
-	var sb = strings.Builder{}
+	sb := strings.Builder{}
 	var paths []string
 	for {
 		if index < size {
@@ -186,6 +206,8 @@ func SplitFile(path string, size int) ([]string, error) {
 				}
 				paths = append(paths, subpath)
 				break
+			} else if err != nil {
+				return paths, errorx.Wrap(err, "read line error")
 			}
 			sb.WriteString("\n")
 			sb.Write(line)
