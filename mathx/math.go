@@ -3,10 +3,9 @@ package mathx
 import "math"
 
 // Ratio 计算百分率
-func Ratio(numerator, denominator, prec int) float64 {
+func Ratio(numerator, denominator float64, prec int) float64 {
 	if denominator > 0 {
-		ratio := float64(numerator) * 100 / float64(denominator)
-		return Ground(ratio, prec)
+		return Ground(numerator*100/denominator, prec)
 	}
 	return 0
 }
