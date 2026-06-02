@@ -9,7 +9,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-// NewConcurrency 创建
+// NewConcurrency 创建并发任务执行器
 func NewConcurrency(size int) *Concurrency {
 	return &Concurrency{
 		tasks:    make([]Task, 0),
@@ -62,6 +62,9 @@ func (t *Concurrency) AddResultHook(hooks ...ResultHook) *Concurrency {
 
 // NewConcurrencyStrategy 创建并发策略
 func NewConcurrencyStrategy(size int) *ConcurrencyStrategy {
+	if size <= 0 {
+		size = 8
+	}
 	return &ConcurrencyStrategy{
 		size: size,
 	}
@@ -73,61 +76,62 @@ type ConcurrencyStrategy struct {
 }
 
 func (c *ConcurrencyStrategy) Execute(ctx context.Context, tasks []Task, hooks ...ResultHook) {
-	if len(tasks) == 0 {
+	total := len(tasks)
+	if total == 0 {
 		return
 	}
-	if c.size <= 0 {
-		c.size = 1
-	}
-	// 计算结果channel缓冲区大小
-	total := len(tasks)
-	var resultBuffer = total / c.size
-	if r := total % c.size; r > 0 {
-		resultBuffer = resultBuffer + 1
-	}
-	var taskCh = make(chan Task, total)             // 任务管道
-	var resultCh = make(chan IResult, resultBuffer) // 结果管道
-	var wg = &sync.WaitGroup{}
 
-	// 使用单独的协程将所有请求添加进管道，避免阻塞
-	go func(tasks []Task, taskCh chan Task) {
+	// inCh 缓冲：至少为 c.size，确保发送任务时不会被阻塞
+	// 公式：max(c.size, total/c.size)，避免任务数少或并发数大时缓冲过小
+	inBuf := total / c.size
+	if inBuf < c.size {
+		inBuf = c.size
+	}
+	inCh := make(chan Task, inBuf)
+	outCh := make(chan IResult, total) // outCh 全缓冲，确保 worker 不会被结果输出阻塞
+	var wg sync.WaitGroup
+
+	// 使用单独的协程将所有任务添加到管道
+	go func() {
+		defer close(inCh)
 		for _, task := range tasks {
-			taskCh <- task
+			select {
+			case <-ctx.Done():
+				return
+			case inCh <- task:
+			}
 		}
-		close(taskCh)
-	}(tasks, taskCh)
+	}()
 
-	// 并发处理异步请求
+	// 并发处理任务
 	for i := 0; i < c.size; i++ {
 		wg.Add(1)
-		go func(ctx context.Context, wg *sync.WaitGroup, taskCh chan Task, resultCh chan IResult) {
+		go func() {
 			defer wg.Done()
-			for task := range taskCh {
-				err := task.Execute(ctx)
-				resultCh <- &Result{
-					task:  task,
-					error: err,
+			for task := range inCh {
+				select {
+				case <-ctx.Done():
+					return
+				default:
+					err := task.Execute(ctx)
+					outCh <- &Result{task: task, error: err}
 				}
 			}
-		}(ctx, wg, taskCh, resultCh)
+		}()
 	}
 
-	// 等待所有请求完成
-	go func(wg *sync.WaitGroup, resultCh chan IResult) {
+	// 等待所有任务完成并关闭结果管道
+	go func() {
 		wg.Wait()
-		close(resultCh)
-	}(wg, resultCh)
-
-	// 没有钩子函数直接返回
-	if len(hooks) == 0 {
-		return
-	}
+		close(outCh)
+	}()
 
 	// 执行钩子函数
-	for result := range resultCh {
-		for _, hook := range hooks {
-			hook(result)
+	if len(hooks) > 0 {
+		for result := range outCh {
+			for _, hook := range hooks {
+				hook(result)
+			}
 		}
 	}
-	return
 }

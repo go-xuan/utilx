@@ -50,13 +50,13 @@ func ErrorCount(count *int64) ResultHook {
 	}
 }
 
-// ErrorRetry 统计错误次数
-func ErrorRetry(times int, interval time.Duration) ResultHook {
-	strategy := NewRetryStrategy(times, interval)
+// ErrorRetry 失败重试
+func ErrorRetry(times int, interval time.Duration, multiplier float64) ResultHook {
+	strategy := NewRetryStrategy(times, interval, multiplier)
 	return func(result IResult) {
 		if err := result.GetError(); err != nil {
 			log.WithError(err).Error("retrying...")
-			if _, err = strategy.Execute(context.Background(), result.GetTask()); err != nil {
+			if err = strategy.Execute(context.Background(), result.GetTask()); err != nil {
 				log.WithError(err).Error("task retry error")
 			}
 		}

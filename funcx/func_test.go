@@ -11,8 +11,8 @@ func TestExecute(t *testing.T) {
 	ctx := t.Context()
 	ExecuteV(testV1, testV2)
 
-	x := MergeX(ctx, testX1, testX2, testX3)
-	if err := x(ctx); err != nil {
+	mergeX := MergeX(testX1, testX2, testX3)
+	if err := mergeX(ctx); err != nil {
 		fmt.Println(err)
 	}
 

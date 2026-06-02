@@ -98,18 +98,19 @@ func Float(f float64) string {
 	return strconv.FormatFloat(f, 'f', -1, 64)
 }
 
-// Json 转为为json字符串
+// Json 转为 JSON 字符串
 func Json(v interface{}) string {
 	data, _ := json.Marshal(v)
 	return string(data)
 }
 
-// JsonIndent 转为为json字符串（格式化）
+// JsonIndent 转为 JSON 字符串（格式化）
 func JsonIndent(v interface{}) string {
 	data, _ := json.MarshalIndent(v, "", "  ")
 	return string(data)
 }
 
+// Yaml 转为 YAML 字符串
 func Yaml(v interface{}) string {
 	data, _ := yaml.Marshal(v)
 	return string(data)
@@ -131,7 +132,7 @@ func Between(str, start, end string) (from, to int) {
 	if m > l || n > l {
 		return
 	}
-	var x, y int // x：start出现次数，y：end出现次数
+	var x, y int
 	for i := 0; i < l; i++ {
 		if a[i] == b[0] && string(a[i:i+m]) == start {
 			if x++; x == 1 {
@@ -154,31 +155,30 @@ func Between(str, start, end string) (from, to int) {
 	return
 }
 
-// Indices 获取所有下标, size：命中数量
+// Indices 获取所有下标，size：命中数量
 func Indices(str, sub string, size ...int) []int {
-	var limit = 0
+	var limit int
 	if len(size) > 0 {
 		limit = size[0]
 	}
 	a, b := []rune(str), []rune(sub)
-	l, m, n := len(a), len(b), 0
-	var indices []int
-	for i := 0; i <= l-m; i++ {
-		if n <= limit || limit <= 0 {
-			if a[i] == b[0] && string(a[i:i+m]) == sub {
-				indices = append(indices, i)
-				i = i + m - 1
-				n++
-			}
-		} else {
+	l, m := len(a), len(b)
+	indices := make([]int, 0)
+	for i, n := 0, 0; i <= l-m; i++ {
+		if limit > 0 && n >= limit {
 			break
+		}
+		if a[i] == b[0] && string(a[i:i+m]) == sub {
+			indices = append(indices, i)
+			i = i + m - 1
+			n++
 		}
 	}
 	return indices
 }
 
 // Index 获取子串的下标
-// position：表示获取位置，默认position=1即正序第1处，position=-1即倒序第1处
+// position：表示获取位置，默认 position=1 即正序第 1 处，position=-1 即倒序第 1 处
 func Index(str, sub string, position ...int) int {
 	a, b := []rune(str), []rune(sub)
 	l, m := len(a), len(b)
@@ -188,7 +188,7 @@ func Index(str, sub string, position ...int) int {
 	case m == l && str == sub:
 		return 0
 	case m < l:
-		var x, y = 1, 0
+		x, y := 1, 0
 		if len(position) > 0 {
 			x = position[0]
 		}
@@ -223,13 +223,13 @@ func IndexStrict(str, key string) int {
 				str = str[index:]
 			}
 		} else {
-			index, loop = -1, false // 没找到直接跳出
+			index, loop = -1, false
 		}
 	}
 	return index
 }
 
-// HasAdjacent 判断目标kew在文本中当前位置是否有相邻字符
+// HasAdjacent 判断目标 key 在文本中当前位置是否有相邻字符
 func HasAdjacent(str, key, adjacent string, index int) bool {
 	sl, kl, al := len(str), len(key), len(adjacent)
 	if index == 0 {
@@ -248,7 +248,7 @@ func AddPrefix(str, prefix string) string {
 	return prefix + str
 }
 
-// AddSuffix 添加前缀
+// AddSuffix 添加后缀
 func AddSuffix(str, suffix string) string {
 	if strings.HasSuffix(str, suffix) {
 		return str
@@ -256,7 +256,7 @@ func AddSuffix(str, suffix string) string {
 	return str + suffix
 }
 
-// Split 字符串分割
+// Split 字符串分割（自动去除空白）
 func Split(str string, sep string) []string {
 	slice := strings.Split(str, sep)
 	for i, s := range slice {
@@ -267,39 +267,35 @@ func Split(str string, sep string) []string {
 
 // Spaces 生成指定长度的空格字符串
 func Spaces(length int) string {
-	var runes []rune
-	for i := 0; i < length; i++ {
-		runes = append(runes, 32) // 32为空格
-	}
-	return string(runes)
+	return strings.Repeat(" ", length)
 }
 
-// Contains 字符串包含
+// Contains 字符串是否包含子串
 func Contains(str string, substr string) bool {
-	return Index(str, substr) >= 0
+	return strings.Contains(str, substr)
 }
 
-// ContainsAny 字符串str是否包含keys中的任意值
+// ContainsAny 字符串 str 是否包含 keys 中的任意值
 func ContainsAny(str string, substr ...string) bool {
 	for _, key := range substr {
-		if Contains(str, key) {
+		if strings.Contains(str, key) {
 			return true
 		}
 	}
 	return false
 }
 
-// ContainsAll 字符串str是否包含keys中的所有值
+// ContainsAll 字符串 str 是否包含 keys 中的所有值
 func ContainsAll(str string, substr ...string) bool {
 	for _, sep := range substr {
-		if Index(str, sep) < 0 {
+		if !strings.Contains(str, sep) {
 			return false
 		}
 	}
 	return true
 }
 
-// HasEmpty 是否有空
+// HasEmpty 是否有空字符串
 func HasEmpty(str ...string) bool {
 	for _, item := range str {
 		if item == "" {
@@ -325,7 +321,7 @@ func IfZero(value, def string) string {
 	return value
 }
 
-// Reverse 反转
+// Reverse 反转字符串
 func Reverse(str string) string {
 	runes := []rune(str)
 	for from, to := 0, len(runes)-1; from < to; from, to = from+1, to-1 {
@@ -347,8 +343,8 @@ func SubString(str string, start, end int) string {
 	return ""
 }
 
-// Cut 分割字符串（reverse=true从右往左）
-// position：表示分割位置，默认position=1即正序第1处，position=-1即倒序第1处
+// Cut 分割字符串
+// position：表示分割位置，默认 position=1 即正序第 1 处，position=-1 即倒序第 1 处
 func Cut(str, cut string, position ...int) (string, string) {
 	if i := Index(str, cut, position...); i >= 0 {
 		return str[:i], str[i+len(cut):]
@@ -384,19 +380,20 @@ func Grow(str string, length int) string {
 		return strings.Repeat(str, length)
 	}
 	var sb strings.Builder
+	sb.Grow(length)
 	for i := 0; i < length; i++ {
-		sb.WriteString(string(str[i%l]))
+		sb.WriteByte(str[i%l])
 	}
 	return sb.String()
 }
 
 // Reduce 字符串缩减（重复子串）
 func Reduce(str string) (string, bool) {
-	if l := len(str); l == 2 { // 长度为2时，仅当两个字符相等时才命中
+	if l := len(str); l == 2 {
 		if str[0] == str[1] {
 			return str[:1], true
 		}
-	} else if l > 2 { // 对于长度大于2的字符串，检查所有可能的子串长度
+	} else if l > 2 {
 		for i := 1; i <= l/2; i++ {
 			if l%i == 0 {
 				sub := str[:i]
@@ -409,18 +406,17 @@ func Reduce(str string) (string, bool) {
 	return str, false
 }
 
-// ParseUrlParams 解析url参数为map
+// ParseUrlParams 解析 url 参数为 map
 func ParseUrlParams(str string) map[string]string {
-	if str != "" {
-		var params = make(map[string]string)
-		var kvs = strings.Split(str, "&")
-		for _, kv := range kvs {
-			k, v := Cut(kv, "=")
-			params[k] = v
-		}
-		return params
+	if str == "" {
+		return nil
 	}
-	return nil
+	params := make(map[string]string)
+	for _, kv := range strings.Split(str, "&") {
+		k, v := Cut(kv, "=")
+		params[k] = v
+	}
+	return params
 }
 
 // ToSnake 转下划线
@@ -435,13 +431,15 @@ func ToSnake(str string) string {
 		}
 		res = append(res, r)
 	}
-	return strings.ToLower(string(res[:]))
+	return strings.ToLower(string(res))
 }
 
 // ToLowerCamel 转小驼峰
 func ToLowerCamel(str string) string {
 	runes := toUpperCamel([]rune(str))
-	runes[0] = runes[0] + 32
+	if len(runes) > 0 {
+		runes[0] = runes[0] + 32
+	}
 	return string(runes)
 }
 
@@ -470,7 +468,7 @@ func toUpperCamel(runes []rune) []rune {
 	return res
 }
 
-// Similarity 文本相似度计算
+// Similarity 文本相似度计算（Levenshtein 距离）
 func Similarity(source, target string) float64 {
 	sl, tl := len(source), len(target)
 	if (sl == 0 && tl == 0) || source == target {
@@ -492,7 +490,7 @@ func Similarity(source, target string) float64 {
 			if source[i-1] != target[j-1] {
 				cost = 1
 			}
-			matrix[i][j] = minInThree(matrix[i-1][j]+1, matrix[i][j-1]+1, matrix[i-1][j-1]+cost)
+			matrix[i][j] = minOfThree(matrix[i-1][j]+1, matrix[i][j-1]+1, matrix[i-1][j-1]+cost)
 		}
 	}
 
@@ -504,7 +502,7 @@ func Similarity(source, target string) float64 {
 	return 1.0 - float64(distance)/maxLen
 }
 
-func minInThree(a, b, c int) int {
+func minOfThree(a, b, c int) int {
 	if a <= b && a <= c {
 		return a
 	} else if b <= a && b <= c {
@@ -513,7 +511,7 @@ func minInThree(a, b, c int) int {
 	return c
 }
 
-// MatchUrl URL匹配
+// MatchUrl URL 匹配
 func MatchUrl(uri, rule string) bool {
 	if rule == "*" || rule == "/*" {
 		return true
@@ -526,7 +524,7 @@ func MatchUrl(uri, rule string) bool {
 			return Index(uri, `/`) < 0
 		}
 	} else {
-		return Contains(uri, rule)
+		return strings.Contains(uri, rule)
 	}
 	return false
 }

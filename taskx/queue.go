@@ -222,9 +222,9 @@ func (q *Queue) AddBefore(baseName, name string, fn funcx.X) {
 func (q *Queue) Remove(name string) {
 	if name != "" {
 		logger := log.WithField("name", name)
+		q.mutex.Lock()
+		defer q.mutex.Unlock()
 		if task, ok := q.tasks[name]; ok {
-			q.mutex.Lock()
-			defer q.mutex.Unlock()
 			if task.prev == nil && task.next == nil {
 				// 移除的是队列中唯一的任务
 				q.head = nil
@@ -265,6 +265,8 @@ func (q *Queue) cover(name string, fn funcx.X) bool {
 
 // Valid 队列是否有效
 func (q *Queue) Valid() bool {
+	q.mutex.Lock()
+	defer q.mutex.Unlock()
 	return q.head != nil && q.tail != nil && len(q.tasks) > 0
 }
 
@@ -279,14 +281,16 @@ func (q *Queue) Reset() {
 
 // Exist 任务是否存在
 func (q *Queue) Exist(name string) bool {
-	if _, ok := q.tasks[name]; ok {
-		return true
-	}
-	return false
+	q.mutex.Lock()
+	defer q.mutex.Unlock()
+	_, ok := q.tasks[name]
+	return ok
 }
 
 func (q *Queue) GetNames() []string {
-	var names = make([]string, 0, len(q.tasks))
+	q.mutex.Lock()
+	defer q.mutex.Unlock()
+	names := make([]string, 0, len(q.tasks))
 	for t := q.head; t != nil; t = t.next {
 		names = append(names, t.name)
 	}

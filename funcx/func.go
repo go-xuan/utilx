@@ -1,3 +1,4 @@
+// Package funcx 提供函数包装和执行工具
 package funcx
 
 import (
@@ -14,14 +15,14 @@ type (
 	X func(context.Context) error // 有上下文参数且返回错误的函数
 )
 
-// ExecuteV 执行多个V函数
+// ExecuteV 执行多个 V 函数
 func ExecuteV(functions ...V) {
 	for _, function := range functions {
 		function()
 	}
 }
 
-// ExecuteE 依次执行多个E函数，任意某个执行错误则返回
+// ExecuteE 依次执行多个 E 函数，任意某个执行错误则返回
 func ExecuteE(functions ...E) error {
 	for _, function := range functions {
 		if err := function(); err != nil {
@@ -31,14 +32,14 @@ func ExecuteE(functions ...E) error {
 	return nil
 }
 
-// ExecuteC 执行多个C函数
+// ExecuteC 执行多个 C 函数
 func ExecuteC(ctx context.Context, functions ...C) {
 	for _, function := range functions {
 		function(ctx)
 	}
 }
 
-// ExecuteX 依次执行多个X函数，任意某个函数执行错误则返回
+// ExecuteX 依次执行多个 X 函数，任意某个函数执行错误则返回
 func ExecuteX(ctx context.Context, functions ...X) error {
 	for _, function := range functions {
 		if err := function(ctx); err != nil {
@@ -48,7 +49,7 @@ func ExecuteX(ctx context.Context, functions ...X) error {
 	return nil
 }
 
-// LogErrorE 依次执行多个E函数，任意某个函数执行错误则记录日志
+// LogErrorE 依次执行多个 E 函数，任意某个函数执行错误则记录日志
 func LogErrorE(functions ...E) {
 	for _, function := range functions {
 		if err := function(); err != nil {
@@ -57,7 +58,7 @@ func LogErrorE(functions ...E) {
 	}
 }
 
-// LogErrorX 执行多个X函数，任意某个函数执行错误则记录日志
+// LogErrorX 执行多个 X 函数，任意某个函数执行错误则记录日志
 func LogErrorX(ctx context.Context, functions ...X) {
 	for _, function := range functions {
 		if err := function(ctx); err != nil {
@@ -66,7 +67,7 @@ func LogErrorX(ctx context.Context, functions ...X) {
 	}
 }
 
-// PanicE 执行多个E函数, 任意某个函数执行错误则panic
+// PanicE 执行多个 E 函数，任意某个函数执行错误则 panic
 func PanicE(functions ...E) {
 	for _, function := range functions {
 		if err := function(); err != nil {
@@ -75,7 +76,7 @@ func PanicE(functions ...E) {
 	}
 }
 
-// PanicX 执行多个X函数, 任意某个函数执行错误则panic
+// PanicX 执行多个 X 函数，任意某个函数执行错误则 panic
 func PanicX(ctx context.Context, functions ...X) {
 	for _, function := range functions {
 		if err := function(ctx); err != nil {
@@ -84,7 +85,7 @@ func PanicX(ctx context.Context, functions ...X) {
 	}
 }
 
-// MergeV 合并多个V函数
+// MergeV 合并多个 V 函数
 func MergeV(functions ...V) V {
 	return func() {
 		for _, function := range functions {
@@ -93,7 +94,7 @@ func MergeV(functions ...V) V {
 	}
 }
 
-// MergeE 合并多个E函数
+// MergeE 合并多个 E 函数
 func MergeE(functions ...E) E {
 	return func() error {
 		for _, function := range functions {
@@ -105,7 +106,7 @@ func MergeE(functions ...E) E {
 	}
 }
 
-// MergeC 合并多个C函数
+// MergeC 合并多个 C 函数
 func MergeC(functions ...C) C {
 	return func(ctx context.Context) {
 		for _, function := range functions {
@@ -114,9 +115,9 @@ func MergeC(functions ...C) C {
 	}
 }
 
-// MergeX 合并多个X函数
-func MergeX(ctx context.Context, functions ...X) X {
-	return func(context.Context) error {
+// MergeX 合并多个 X 函数
+func MergeX(functions ...X) X {
+	return func(ctx context.Context) error {
 		for _, function := range functions {
 			if err := function(ctx); err != nil {
 				return errorx.Wrap(err, "execute failed")

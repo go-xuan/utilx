@@ -7,19 +7,16 @@ import (
 
 func TestRetryStrategy(t *testing.T) {
 	task := testTask{id: 1, ratio: 0.1}
-	strategy := NewRetryStrategy(10, time.Second)
-	times, err := strategy.Execute(t.Context(), task)
+	err := NewRetryStrategy(6, 5*time.Second, 1.5).Execute(t.Context(), task)
 	if err != nil {
 		t.Log(err)
 		return
 	}
-	t.Log("times", times)
-	t.Log("retry strategy execute success")
 }
 
 func TestRetry(t *testing.T) {
 	task := testTask{id: 1, ratio: 0.1}
-	retry := NewRetry(task, 10, time.Second)
+	retry := NewRetry(task, DefaultRetryStrategy())
 	if err := retry.Execute(t.Context()); err != nil {
 		t.Log(err)
 	}
