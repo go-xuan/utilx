@@ -4,7 +4,7 @@ go 1.25
 
 require (
 	github.com/BurntSushi/toml v1.6.0
-	github.com/go-xuan/typex v1.26.3
+	github.com/go-xuan/typex v1.26.4
 	github.com/google/uuid v1.6.0
 	github.com/magiconair/properties v1.8.10
 	github.com/robfig/cron/v3 v3.0.1

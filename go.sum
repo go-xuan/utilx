@@ -2,8 +2,8 @@ github.com/BurntSushi/toml v1.6.0 h1:dRaEfpa2VI55EwlIW72hMRHdWouJeRF7TPYhI+AUQjk
 github.com/BurntSushi/toml v1.6.0/go.mod h1:ukJfTF/6rtPPRCnwkur4qwRxa8vTRFBF0uk2lLoLwho=
 github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c=
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
-github.com/go-xuan/typex v1.26.3 h1:gNv3aMcBo8th44OmmHOufjksdLLIfET6XGwXK87E1u8=
-github.com/go-xuan/typex v1.26.3/go.mod h1:q7/j65RGZYHwX0PEpPdd8hZCBcusUzwXvJzzyjW5kao=
+github.com/go-xuan/typex v1.26.4 h1:cxYm3zuJ+RYahgI1TI6JC0icxhXpc0aM6BMKOVJFu94=
+github.com/go-xuan/typex v1.26.4/go.mod h1:q7/j65RGZYHwX0PEpPdd8hZCBcusUzwXvJzzyjW5kao=
 github.com/golang/protobuf v1.5.0/go.mod h1:FsONVRAS9T7sI+LIUmWTfcYkHO4aIWwzhcaSAoJOfIk=
 github.com/golang/protobuf v1.5.2 h1:ROPKBNFfQgOUMifHyP+KYbvpjbdoFNs+aK7DXlji0Tw=
 github.com/golang/protobuf v1.5.2/go.mod h1:XVQd3VNwM+JqD3oG2Ue2ip4fOMUkwXdXDdiuN0vRsmY=

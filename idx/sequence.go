@@ -13,7 +13,7 @@ func GetSequence(name string) *Sequence {
 	if sequencePool == nil {
 		sequencePool = typex.NewStringEnum[*Sequence]()
 	}
-	sequence, ok := sequencePool.Exist(name)
+	sequence, ok := sequencePool.Find(name)
 	if !ok {
 		sequence = NewSequence(name, 0, 1)
 		sequencePool.Add(name, sequence)
