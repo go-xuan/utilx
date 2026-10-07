@@ -3,18 +3,24 @@ package execx
 import (
 	"bufio"
 	"io"
+	"os"
 	"os/exec"
 	"runtime"
 
 	"github.com/go-xuan/utilx/errorx"
 )
 
-// NewCommand 创建命令
+// NewCommand 创建命令（通过 shell 执行，需注意输入转义）
 func NewCommand(command string) *Command {
 	if runtime.GOOS == "windows" {
 		return &Command{exec.Command("cmd", "/C", command)}
 	}
 	return &Command{exec.Command("/bin/bash", "-c", command)}
+}
+
+// CommandArgs 创建命令（参数化调用，不走 shell，安全）
+func CommandArgs(name string, args ...string) *Command {
+	return &Command{exec.Command(name, args...)}
 }
 
 // Command 命令
@@ -43,6 +49,15 @@ func (c *Command) Stdout(writer io.Writer) *Command {
 // Stderr 设置命令错误输出
 func (c *Command) Stderr(writer io.Writer) *Command {
 	c.cmd.Stderr = writer
+	return c
+}
+
+// Env 追加环境变量
+func (c *Command) Env(key, value string) *Command {
+	if c.cmd.Env == nil {
+		c.cmd.Env = os.Environ()
+	}
+	c.cmd.Env = append(c.cmd.Env, key+"="+value)
 	return c
 }
 
