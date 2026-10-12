@@ -6,11 +6,11 @@ require (
 	github.com/BurntSushi/toml v1.6.0
 	github.com/go-xuan/typex v1.26.4
 	github.com/google/uuid v1.6.0
-	github.com/magiconair/properties v1.8.10
+	github.com/magiconair/properties v1.18.12
 	github.com/robfig/cron/v3 v3.0.1
-	github.com/sirupsen/logrus v1.9.4
+	github.com/sirupsen/logrus v1.10.2
 	github.com/tealeg/xlsx v1.0.5
-	github.com/tidwall/gjson v1.19.0
+	github.com/tidwall/gjson v1.20.0
 	github.com/vmihailenco/msgpack v4.0.4+incompatible
 	gopkg.in/yaml.v3 v3.0.1
 )
